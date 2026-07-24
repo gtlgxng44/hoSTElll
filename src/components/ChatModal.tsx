@@ -4,7 +4,7 @@ import {
   CheckCheck, Sparkles, ChevronLeft, ArrowRight, ArrowLeft, ShieldCheck, GraduationCap
 } from "lucide-react";
 import { User as UserType, Hostel, ChatMessage, Conversation } from "../types";
-import { fetchConversations, saveConversation, fetchMessages, saveMessage } from "../lib/firebase";
+import { fetchConversations, saveConversation, fetchMessages, saveMessage, subscribeToConversations, subscribeToMessages } from "../lib/firebase";
 
 function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -54,23 +54,26 @@ export function ChatModal({
   // Load conversations on mount / opening
   useEffect(() => {
     if (!isOpen) return;
-
     if (!currentUser) {
       onRequireLogin();
       onClose();
       return;
     }
 
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        let convList: Conversation[] = await fetchConversations(currentUser.id);
+    setLoading(true);
 
-        // Filter conversations relevant to current user
-        const userConvs = convList.filter(
-          (c) => c.studentId === currentUser.id || c.hostId === currentUser.id
-        );
+    let isFirstLoad = true;
 
+    const unsubscribe = subscribeToConversations(currentUser.id, async (convs) => {
+      // Filter conversations relevant to current user
+      const userConvs = convs.filter(
+        (c) => c.studentId === currentUser.id || c.hostId === currentUser.id
+      ).sort((a, b) => b.lastUpdated - a.lastUpdated);
+      
+      setConversations(userConvs);
+
+      if (isFirstLoad) {
+        isFirstLoad = false;
         let targetConvId: string | null = null;
 
         // If launched for a specific hostel
@@ -95,24 +98,21 @@ export function ChatModal({
               lastMessage: "Conversation started",
               lastUpdated: Date.now(),
             };
-            convList = [existing, ...convList];
             await saveConversation(existing);
+            targetConvId = existing.id;
+          } else {
+            targetConvId = existing.id;
           }
-          targetConvId = existing.id;
         } else if (userConvs.length > 0) {
           targetConvId = userConvs[0].id;
         }
 
-        setConversations(convList.filter((c) => c.studentId === currentUser.id || c.hostId === currentUser.id));
         setActiveConvId(targetConvId);
-      } catch (err) {
-        console.error("Failed loading chat conversations", err);
-      } finally {
         setLoading(false);
       }
-    };
+    });
 
-    loadData();
+    return () => unsubscribe();
   }, [isOpen, currentUser, initialHostel]);
 
   // Load messages for active conversation
@@ -122,32 +122,40 @@ export function ChatModal({
       return;
     }
 
-    const loadMessages = async () => {
-      try {
-        const msgs = await fetchMessages(activeConvId);
-        if (msgs.length > 0) {
-          setMessages(msgs);
-        } else {
-          // If fresh conversation, add welcome greeting from property owner
-          const activeConv = conversations.find((c) => c.id === activeConvId);
-          const initialMsg: ChatMessage = {
-            id: uid(),
-            conversationId: activeConvId,
-            senderId: activeConv?.hostId || "owner-default",
-            senderName: activeConv?.hostName || "Property Manager",
-            senderRole: "host",
-            text: `Welcome to ${activeConv?.hostelTitle || "our student hostel"}! How can we assist you with your student room booking or inquiry?`,
-            timestamp: Date.now(),
-          };
-          setMessages([initialMsg]);
-          await saveMessage(initialMsg);
-        }
-      } catch (err) {
-        console.error("Failed loading messages", err);
-      }
-    };
+    let isSubscribed = true;
 
-    loadMessages();
+    const unsubscribe = subscribeToMessages(activeConvId, async (msgs) => {
+      if (!isSubscribed) return;
+
+      if (msgs.length > 0) {
+        setMessages(msgs);
+      } else {
+        // If fresh conversation, add welcome greeting from property owner
+        // We do this by checking if there's a local conversation with this ID
+        setConversations(prev => {
+           const activeConv = prev.find((c) => c.id === activeConvId);
+           if (activeConv) {
+             const initialMsg: ChatMessage = {
+               id: uid(),
+               conversationId: activeConvId,
+               senderId: activeConv?.hostId || "owner-default",
+               senderName: activeConv?.hostName || "Property Manager",
+               senderRole: "host",
+               text: `Welcome to ${activeConv?.hostelTitle || "our student hostel"}! How can we assist you with your student room booking or inquiry?`,
+               timestamp: Date.now(),
+             };
+             // Save it so it fires a snapshot update next time
+             saveMessage(initialMsg).catch(console.error);
+           }
+           return prev;
+        });
+      }
+    });
+
+    return () => {
+      isSubscribed = false;
+      unsubscribe();
+    };
   }, [activeConvId]);
 
   useEffect(() => {
@@ -188,39 +196,7 @@ export function ChatModal({
     await saveMessage(newMsg);
     await saveConversation(currentConvUpdate);
 
-    // If student sent message to host, simulate prompt owner response after 1.2s for rich feedback
-    if (currentUser.role === "guest") {
-      setTimeout(async () => {
-        const replyIndex = Math.floor(Math.random() * OWNER_AUTO_RESPONSES.length);
-        const ownerReply: ChatMessage = {
-          id: uid(),
-          conversationId: activeConvId,
-          senderId: currentConv.hostId,
-          senderName: currentConv.hostName,
-          senderRole: "host",
-          text: OWNER_AUTO_RESPONSES[replyIndex],
-          timestamp: Date.now(),
-        };
-
-        setMessages((prev) => {
-          const next = [...prev, ownerReply];
-          saveMessage(ownerReply);
-          return next;
-        });
-
-        setConversations((prev) => {
-          const nextConvs = prev.map((c) => {
-            if (c.id === activeConvId) {
-               const updated = { ...c, lastMessage: ownerReply.text, lastUpdated: Date.now() };
-               saveConversation(updated);
-               return updated;
-            }
-            return c;
-          });
-          return nextConvs;
-        });
-      }, 1200);
-    }
+    // No auto-reply simulation for Firebase real-time chat
   };
 
   if (!isOpen) return null;

@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, setDoc, deleteDoc, doc, query, where, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, setDoc, deleteDoc, doc, query, where, updateDoc, onSnapshot } from "firebase/firestore";
 import { Hostel, User, Booking, Conversation, ChatMessage } from "../types";
 
 const firebaseConfig = {
@@ -54,6 +54,15 @@ export const fetchConversations = async (userId: string): Promise<Conversation[]
   return allConvs.filter(c => c.studentId === userId || c.hostId === userId);
 };
 
+export const subscribeToConversations = (userId: string, callback: (convs: Conversation[]) => void) => {
+  // Listen to all and filter, since we don't have complex indexes setup right now.
+  const q = query(collection(db, "conversations"));
+  return onSnapshot(q, (snapshot) => {
+    const allConvs = snapshot.docs.map(d => d.data() as Conversation);
+    callback(allConvs.filter(c => c.studentId === userId || c.hostId === userId));
+  });
+};
+
 export const saveConversation = async (conv: Conversation): Promise<void> => {
   await setDoc(doc(db, "conversations", conv.id), conv);
 };
@@ -62,6 +71,14 @@ export const fetchMessages = async (convId: string): Promise<ChatMessage[]> => {
   const q = query(collection(db, "messages"), where("conversationId", "==", convId));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(d => d.data() as ChatMessage).sort((a, b) => a.timestamp - b.timestamp);
+};
+
+export const subscribeToMessages = (convId: string, callback: (msgs: ChatMessage[]) => void) => {
+  const q = query(collection(db, "messages"), where("conversationId", "==", convId));
+  return onSnapshot(q, (snapshot) => {
+    const msgs = snapshot.docs.map(d => d.data() as ChatMessage).sort((a, b) => a.timestamp - b.timestamp);
+    callback(msgs);
+  });
 };
 
 export const saveMessage = async (msg: ChatMessage): Promise<void> => {

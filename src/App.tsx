@@ -272,6 +272,8 @@ function AdminHostelModal({ onClose, onSave, existingHostel = null, currentUser 
       images,
       stamped: true,
       rating: existingHostel?.rating || 5.0,
+      ownerId: existingHostel?.ownerId || currentUser?.id || "owner-default",
+      ownerName: existingHostel?.ownerName || currentUser?.name || "Property Manager",
     });
   };
 
