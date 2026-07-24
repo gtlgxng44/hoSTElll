@@ -9,7 +9,6 @@ import {
 import { Hostel, User, AmenityInfo, AuthenticateParams, AuthResult, Booking } from "./types";
 import { UserProfileModal } from "./components/UserProfileModal";
 import { ChatModal } from "./components/ChatModal";
-import { isSupabaseConfigured } from "./lib/supabase";
 
 declare global {
   interface Window {
