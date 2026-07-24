@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-serif {
+    font-family: 'Cinzel', 'Georgia', serif;
+  }
+  .font-display {
+    font-family: 'Cinzel', 'Georgia', serif;
+  }
+  .glass-dark {
+    background: rgba(18, 18, 18, 0.75);
+    backdrop-filter: blur(12px);
+  }
+  .border-subtle {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}

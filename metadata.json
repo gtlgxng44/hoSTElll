@@ -1,0 +1,6 @@
+{
+  "name": "Hostel Log",
+  "description": "Hostel management and traveler booking hub with house pictures gallery and amenities filter.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
