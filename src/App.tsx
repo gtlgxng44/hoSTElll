@@ -4,12 +4,11 @@ import {
   Coffee, Lock, WashingMachine, Sofa, UtensilsCrossed, Clock, Trash2,
   Luggage, UserCircle, LogOut, KeyRound, Eye, EyeOff, Mail,
   ShieldCheck, User as UserIcon, Stamp, Camera, Edit, Heart, Bookmark,
-  GraduationCap, BookOpen, Bus, Building2, Sparkles, MessageSquare, Database
+  GraduationCap, BookOpen, Bus, Building2, Sparkles, MessageSquare
 } from "lucide-react";
 import { Hostel, User, AmenityInfo, AuthenticateParams, AuthResult, Booking } from "./types";
 import { UserProfileModal } from "./components/UserProfileModal";
 import { ChatModal } from "./components/ChatModal";
-import { SupabaseModal } from "./components/SupabaseModal";
 import { isSupabaseConfigured } from "./lib/supabase";
 
 declare global {
@@ -644,7 +643,6 @@ export default function HostelLogApp() {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
-  const [showSupabaseModal, setShowSupabaseModal] = useState(false);
   const [chatTargetHostel, setChatTargetHostel] = useState<Hostel | null>(null);
   const [editingHostel, setEditingHostel] = useState<Hostel | null>(null);
   const [selectedHostel, setSelectedHostel] = useState<Hostel | null>(null);
@@ -851,19 +849,6 @@ export default function HostelLogApp() {
 
         <nav className="flex items-center gap-2.5 font-mono text-xs uppercase tracking-wider">
           <button
-            onClick={() => setShowSupabaseModal(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border transition text-xs font-mono ${
-              isSupabaseConfigured
-                ? "bg-[#3ecf8e]/10 text-[#3ecf8e] border-[#3ecf8e]/40 hover:bg-[#3ecf8e]/20"
-                : "bg-[#141414] hover:bg-[#1e1e1e] text-[#888888] hover:text-white border-white/10"
-            }`}
-            title="Supabase Database Configuration & SQL Schema"
-          >
-            <Database className="w-3.5 h-3.5 text-[#3ecf8e]" />
-            <span className="hidden sm:inline">Supabase</span>
-          </button>
-
-          <button
             onClick={() => {
               if (!currentUser) {
                 setShowAuthModal(true);
@@ -919,9 +904,59 @@ export default function HostelLogApp() {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-6xl mx-auto px-5 sm:px-8 py-8">
-        
-        {/* Search & Actions Bar */}
+      {!currentUser ? (
+        <main className="flex-1 flex flex-col justify-center items-center px-5 sm:px-8 py-20 text-center relative overflow-hidden min-h-[80vh]">
+          {/* Background subtle glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#c5a059]/5 rounded-full blur-[100px] pointer-events-none"></div>
+          
+          <div className="z-10 max-w-3xl mx-auto space-y-8 rise-in">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-sm bg-[#141414] border border-[#c5a059]/30 text-[#c5a059] text-[10px] font-mono uppercase tracking-widest mb-4 shadow-lg shadow-[#c5a059]/5">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Verified Student Housing Portal</span>
+            </div>
+            
+            <h1 className="text-5xl sm:text-7xl font-serif font-bold tracking-tight text-white leading-[1.1]">
+              Find Your Perfect <br className="hidden sm:block" />
+              <span className="text-[#c5a059] italic pr-2">Campus Home</span>
+            </h1>
+            
+            <p className="text-[#888888] text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
+              The premier directory for verified student accommodations. Browse premium listings, connect directly with hosts, and secure your residence with confidence.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="w-full sm:w-auto px-8 py-4 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/20 flex items-center justify-center gap-2"
+              >
+                <KeyRound className="w-4 h-4" /> Access Portal
+              </button>
+            </div>
+          </div>
+          
+          <div className="z-10 mt-24 w-full max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16 border-t border-white/5 pt-12 text-center rise-in" style={{ animationDelay: '0.1s' }}>
+            <div>
+              <div className="text-3xl font-serif font-bold text-white mb-1">50+</div>
+              <div className="text-[10px] font-mono uppercase text-[#666666] tracking-widest">Premium Properties</div>
+            </div>
+            <div>
+              <div className="text-3xl font-serif font-bold text-white mb-1">100%</div>
+              <div className="text-[10px] font-mono uppercase text-[#666666] tracking-widest">Verified Hosts</div>
+            </div>
+            <div>
+              <div className="text-3xl font-serif font-bold text-white mb-1">24/7</div>
+              <div className="text-[10px] font-mono uppercase text-[#666666] tracking-widest">Direct Messaging</div>
+            </div>
+            <div>
+              <div className="text-3xl font-serif font-bold text-white mb-1">Safe</div>
+              <div className="text-[10px] font-mono uppercase text-[#666666] tracking-widest">Secure Bookings</div>
+            </div>
+          </div>
+        </main>
+      ) : (
+        <main className="max-w-6xl mx-auto px-5 sm:px-8 py-8">
+          
+          {/* Search & Actions Bar */}
         <section className="mb-8 space-y-4">
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
             <div className="relative flex-1 max-w-md">
@@ -1161,6 +1196,7 @@ export default function HostelLogApp() {
           )}
         </section>
       </main>
+      )}
 
       {/* Render Modals */}
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuthenticate={authenticate} />}
@@ -1244,11 +1280,6 @@ export default function HostelLogApp() {
           }}
         />
       )}
-
-      <SupabaseModal
-        isOpen={showSupabaseModal}
-        onClose={() => setShowSupabaseModal(false)}
-      />
 
       {/* Toast Notification */}
       {toast && (
