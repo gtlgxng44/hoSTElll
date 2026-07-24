@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Hostel, User, AmenityInfo, AuthenticateParams, AuthResult, Booking } from "./types";
 import { UserProfileModal } from "./components/UserProfileModal";
+import { fetchHostels, saveHostel, removeHostel, fetchUsers, saveUser, fetchBookings, saveBooking } from "./lib/firebase";
 import { ChatModal } from "./components/ChatModal";
 
 declare global {
@@ -379,7 +380,7 @@ function AdminHostelModal({ onClose, onSave, existingHostel = null, currentUser 
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-mono uppercase text-[10px] text-[#888888] tracking-wider mb-1">Hostel Title</label>
               <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Mara River Lodge" className="auth-input" />
@@ -390,7 +391,7 @@ function AdminHostelModal({ onClose, onSave, existingHostel = null, currentUser 
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block font-mono uppercase text-[10px] text-[#888888] tracking-wider mb-1">Rate (Ksh)</label>
               <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required className="auth-input" />
@@ -407,7 +408,7 @@ function AdminHostelModal({ onClose, onSave, existingHostel = null, currentUser 
 
           <div>
             <label className="block font-mono uppercase text-[10px] text-[#888888] tracking-wider mb-1.5">Amenities</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {Object.entries(AMENITY_ICONS).map(([key, { label, icon: Icon }]) => (
                 <button
                   type="button"
@@ -681,20 +682,20 @@ export default function HostelLogApp() {
 
   useEffect(() => {
     (async () => {
-      const u = await safeStorage.get("users-all", true);
-      if (u?.value) setUsers(JSON.parse(u.value));
+      const u = await fetchUsers();
+      setUsers(u);
 
       const session = await safeStorage.get("current-user", false);
       if (session?.value) {
         const parsedUser: User = JSON.parse(session.value);
         setCurrentUser(parsedUser);
 
-        const b = await safeStorage.get(`bookings-${parsedUser.id}`, true);
-        if (b?.value) setUserBookings(JSON.parse(b.value));
+        const b = await fetchBookings(parsedUser.id);
+        setUserBookings(b);
       }
 
-      const savedHostels = await safeStorage.get("hostels-data", true);
-      if (savedHostels?.value) setHostels(JSON.parse(savedHostels.value));
+      const savedHostels = await fetchHostels();
+      setHostels(savedHostels);
     })();
   }, []);
 
@@ -705,16 +706,20 @@ export default function HostelLogApp() {
 
   const persistUsers = async (nextUsers: User[]) => {
     setUsers(nextUsers);
-    await safeStorage.set("users-all", JSON.stringify(nextUsers), true);
+    // Sync all new users or updated users - practically speaking we save the latest one
+    // But since this is a list replace, we should save the last one added/modified.
+    // Our Firebase saveUser function handles single users, so we'll just iterate:
+    for (const u of nextUsers) {
+      await saveUser(u);
+    }
   };
 
   const persistSession = async (user: User | null) => {
     setCurrentUser(user);
     if (user) {
       await safeStorage.set("current-user", JSON.stringify(user), false);
-      const b = await safeStorage.get(`bookings-${user.id}`, true);
-      if (b?.value) setUserBookings(JSON.parse(b.value));
-      else setUserBookings([]);
+      const b = await fetchBookings(user.id);
+      setUserBookings(b);
     } else {
       await safeStorage.delete("current-user", false);
       setUserBookings([]);
@@ -770,7 +775,7 @@ export default function HostelLogApp() {
       showToast("New hostel published with house gallery!");
     }
     setHostels(updated);
-    await safeStorage.set("hostels-data", JSON.stringify(updated), true);
+    await saveHostel(hostelData);
     setShowAdminModal(false);
     setEditingHostel(null);
   };
@@ -783,7 +788,7 @@ export default function HostelLogApp() {
     }
     const updated = hostels.filter(h => h.id !== id);
     setHostels(updated);
-    await safeStorage.set("hostels-data", JSON.stringify(updated), true);
+    await removeHostel(id);
     showToast("Hostel deleted.");
   };
 
@@ -872,7 +877,7 @@ export default function HostelLogApp() {
             <span className="font-serif font-bold text-2xl tracking-tight block leading-none text-white">
               STUDENT<span className="text-[#c5a059]">LOG</span>
             </span>
-            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#888888]">Student Accommodation & Renter Portal</span>
+            <span className="hidden sm:block font-mono text-[9px] uppercase tracking-[0.2em] text-[#888888]">Student Accommodation & Renter Portal</span>
           </div>
         </div>
 
@@ -1058,8 +1063,10 @@ export default function HostelLogApp() {
             {hostels.length > 0 && (
               <button
                 onClick={async () => {
+                  for (const h of hostels) {
+                    await removeHostel(h.id);
+                  }
                   setHostels([]);
-                  await safeStorage.set("hostels-data", JSON.stringify([]), true);
                   showToast("Catalog cleared to blank directory.");
                 }}
                 className="px-3 py-2 bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 text-red-300 font-mono text-[11px] uppercase rounded-sm transition flex items-center gap-1.5"
@@ -1271,7 +1278,7 @@ export default function HostelLogApp() {
             const updatedBookings = [newBooking, ...userBookings];
             setUserBookings(updatedBookings);
             if (currentUser) {
-              await safeStorage.set(`bookings-${currentUser.id}`, JSON.stringify(updatedBookings), true);
+              await saveBooking(newBooking);
             }
             const dateRangeMsg = startDate && endDate ? ` (${startDate} to ${endDate})` : '';
             showToast(`Stay reservation submitted for ${nights} month(s)${dateRangeMsg} for Ksh ${total?.toLocaleString()}!`);

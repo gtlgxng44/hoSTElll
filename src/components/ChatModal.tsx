@@ -1,29 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   X, Send, MessageSquare, Building2, User, Clock,
-  CheckCheck, Sparkles, ChevronLeft, ArrowRight, ShieldCheck, GraduationCap
+  CheckCheck, Sparkles, ChevronLeft, ArrowRight, ArrowLeft, ShieldCheck, GraduationCap
 } from "lucide-react";
 import { User as UserType, Hostel, ChatMessage, Conversation } from "../types";
-
-const safeStorage = {
-  get: async (key: string, isGlobal?: boolean) => {
-    try {
-      if (window.storage?.get) return await window.storage.get(key, isGlobal);
-      const val = localStorage.getItem(key);
-      return val ? { value: val } : null;
-    } catch {
-      return null;
-    }
-  },
-  set: async (key: string, value: string, isGlobal?: boolean) => {
-    try {
-      if (window.storage?.set) return await window.storage.set(key, value, isGlobal);
-      localStorage.setItem(key, value);
-    } catch {
-      // fallback silent
-    }
-  },
-};
+import { fetchConversations, saveConversation, fetchMessages, saveMessage } from "../lib/firebase";
 
 function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -83,8 +64,7 @@ export function ChatModal({
     const loadData = async () => {
       setLoading(true);
       try {
-        const stored = await safeStorage.get("studentlog_conversations", true);
-        let convList: Conversation[] = stored?.value ? JSON.parse(stored.value) : [];
+        let convList: Conversation[] = await fetchConversations(currentUser.id);
 
         // Filter conversations relevant to current user
         const userConvs = convList.filter(
@@ -116,7 +96,7 @@ export function ChatModal({
               lastUpdated: Date.now(),
             };
             convList = [existing, ...convList];
-            await safeStorage.set("studentlog_conversations", JSON.stringify(convList), true);
+            await saveConversation(existing);
           }
           targetConvId = existing.id;
         } else if (userConvs.length > 0) {
@@ -144,9 +124,9 @@ export function ChatModal({
 
     const loadMessages = async () => {
       try {
-        const stored = await safeStorage.get(`studentlog_msg_${activeConvId}`, true);
-        if (stored?.value) {
-          setMessages(JSON.parse(stored.value));
+        const msgs = await fetchMessages(activeConvId);
+        if (msgs.length > 0) {
+          setMessages(msgs);
         } else {
           // If fresh conversation, add welcome greeting from property owner
           const activeConv = conversations.find((c) => c.id === activeConvId);
@@ -160,7 +140,7 @@ export function ChatModal({
             timestamp: Date.now(),
           };
           setMessages([initialMsg]);
-          await safeStorage.set(`studentlog_msg_${activeConvId}`, JSON.stringify([initialMsg]), true);
+          await saveMessage(initialMsg);
         }
       } catch (err) {
         console.error("Failed loading messages", err);
@@ -196,16 +176,17 @@ export function ChatModal({
     setInputMsg("");
 
     // Update conversation lastMessage
+    const currentConvUpdate = { ...currentConv, lastMessage: text.trim(), lastUpdated: Date.now() };
     const updatedConvs = conversations.map((c) =>
       c.id === activeConvId
-        ? { ...c, lastMessage: text.trim(), lastUpdated: Date.now() }
+        ? currentConvUpdate
         : c
     );
     setConversations(updatedConvs);
 
     // Save to storage
-    await safeStorage.set(`studentlog_msg_${activeConvId}`, JSON.stringify(updatedMessages), true);
-    await safeStorage.set("studentlog_conversations", JSON.stringify(updatedConvs), true);
+    await saveMessage(newMsg);
+    await saveConversation(currentConvUpdate);
 
     // If student sent message to host, simulate prompt owner response after 1.2s for rich feedback
     if (currentUser.role === "guest") {
@@ -223,17 +204,19 @@ export function ChatModal({
 
         setMessages((prev) => {
           const next = [...prev, ownerReply];
-          safeStorage.set(`studentlog_msg_${activeConvId}`, JSON.stringify(next), true);
+          saveMessage(ownerReply);
           return next;
         });
 
         setConversations((prev) => {
-          const nextConvs = prev.map((c) =>
-            c.id === activeConvId
-              ? { ...c, lastMessage: ownerReply.text, lastUpdated: Date.now() }
-              : c
-          );
-          safeStorage.set("studentlog_conversations", JSON.stringify(nextConvs), true);
+          const nextConvs = prev.map((c) => {
+            if (c.id === activeConvId) {
+               const updated = { ...c, lastMessage: ownerReply.text, lastUpdated: Date.now() };
+               saveConversation(updated);
+               return updated;
+            }
+            return c;
+          });
           return nextConvs;
         });
       }, 1200);
@@ -257,7 +240,7 @@ export function ChatModal({
         </button>
 
         {/* SIDEBAR: CONVERSATIONS LIST */}
-        <div className="w-full md:w-80 border-r border-white/10 bg-[#080808] flex flex-col h-1/3 md:h-full">
+        <div className={`w-full md:w-80 border-r border-white/10 bg-[#080808] flex-col h-full ${activeConvId ? "hidden md:flex" : "flex"}`}>
           <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#111]">
             <div className="flex items-center gap-2 text-white font-serif font-bold text-base">
               <MessageSquare className="w-4 h-4 text-[#c5a059]" />
@@ -336,12 +319,19 @@ export function ChatModal({
         </div>
 
         {/* CHAT MAIN AREA */}
-        <div className="flex-1 flex flex-col h-2/3 md:h-full bg-[#0e0e0e]">
+        <div className={`flex-1 flex-col h-full bg-[#0e0e0e] ${!activeConvId ? "hidden md:flex" : "flex"}`}>
           {activeConv ? (
             <>
               {/* CHAT HEADER */}
               <div className="p-4 border-b border-white/10 bg-[#121212] flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setActiveConvId("")}
+                    className="md:hidden p-2 -ml-2 text-[#888] hover:text-white transition"
+                    title="Back to inquiries"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
                   {activeConv.hostelImage && (
                     <img
                       src={activeConv.hostelImage}

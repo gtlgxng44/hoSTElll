@@ -1,0 +1,95 @@
+{
+  "collections": [
+    {
+      "name": "users",
+      "documentId": "User UUID",
+      "rules": "Users can read all users and write only their own profile.",
+      "fields": {
+        "id": "string",
+        "name": "string",
+        "email": "string",
+        "role": "string",
+        "passHash": "string",
+        "avatarUrl": "string",
+        "bio": "string",
+        "phone": "string",
+        "location": "string",
+        "savedHostelIds": "array",
+        "privacySettings": "map",
+        "createdAt": "number"
+      }
+    },
+    {
+      "name": "hostels",
+      "documentId": "Hostel UUID",
+      "rules": "Anyone can read hostels. Only hosts/admins can create. Owners can update or delete their own.",
+      "fields": {
+        "id": "string",
+        "title": "string",
+        "location": "string",
+        "capacity": "number",
+        "price": "number",
+        "rating": "number",
+        "description": "string",
+        "amenities": "array",
+        "images": "array",
+        "checkInTime": "string",
+        "houseRules": "string",
+        "stamped": "boolean",
+        "ownerId": "string",
+        "ownerName": "string"
+      }
+    },
+    {
+      "name": "bookings",
+      "documentId": "Booking UUID",
+      "rules": "Users can only read and write their own bookings.",
+      "fields": {
+        "id": "string",
+        "hostelId": "string",
+        "hostelTitle": "string",
+        "hostelLocation": "string",
+        "hostelImage": "string",
+        "nights": "number",
+        "guests": "number",
+        "totalPrice": "number",
+        "createdAt": "number",
+        "status": "string",
+        "startDate": "string",
+        "endDate": "string",
+        "userId": "string"
+      }
+    },
+    {
+      "name": "conversations",
+      "documentId": "Conversation UUID",
+      "rules": "Participants can read and write conversations.",
+      "fields": {
+        "id": "string",
+        "hostelId": "string",
+        "hostelTitle": "string",
+        "hostelImage": "string",
+        "studentId": "string",
+        "studentName": "string",
+        "hostId": "string",
+        "hostName": "string",
+        "lastMessage": "string",
+        "lastUpdated": "number"
+      }
+    },
+    {
+      "name": "messages",
+      "documentId": "Message UUID",
+      "rules": "Participants can read and write messages in their conversations.",
+      "fields": {
+        "id": "string",
+        "conversationId": "string",
+        "senderId": "string",
+        "senderName": "string",
+        "senderRole": "string",
+        "text": "string",
+        "timestamp": "number"
+      }
+    }
+  ]
+}
