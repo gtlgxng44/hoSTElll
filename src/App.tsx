@@ -326,21 +326,51 @@ function AdminHostelModal({ onClose, onSave, existingHostel = null, currentUser 
             </div>
 
             {isAdmin ? (
-              <div className="flex gap-2 pt-1">
-                <input
-                  type="url"
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="Paste picture URL (Unsplash, Imgur...)"
-                  className="auth-input flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddImage}
-                  className="px-4 py-2 bg-[#c5a059] text-black font-bold rounded-sm font-mono text-xs flex items-center gap-1.5 hover:brightness-110 transition"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add Pic
-                </button>
+              <div className="flex flex-col gap-2 pt-1">
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={newImageUrl}
+                    onChange={(e) => setNewImageUrl(e.target.value)}
+                    placeholder="Paste picture URL (Unsplash, Imgur...)"
+                    className="auth-input flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddImage}
+                    className="px-4 py-2 bg-[#c5a059] text-black font-bold rounded-sm font-mono text-xs flex items-center gap-1.5 hover:brightness-110 transition whitespace-nowrap"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add URL
+                  </button>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-[#666666] font-mono uppercase">OR</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="hostel-image-upload"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          if (typeof reader.result === "string") {
+                            setImages([...images, reader.result]);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="hostel-image-upload"
+                    className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#252525] border border-white/10 text-white rounded-sm font-mono text-xs flex items-center justify-center gap-1.5 transition cursor-pointer flex-1 text-center"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-[#c5a059]" /> Upload from Device
+                  </label>
+                </div>
               </div>
             ) : (
               <p className="text-[11px] font-mono text-[#888888] italic">
