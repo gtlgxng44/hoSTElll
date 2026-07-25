@@ -281,32 +281,13 @@ Thank you for using StudentLog!
                     <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm font-mono text-xs space-y-2">
                       <div className="text-[10px] uppercase text-emerald-400 font-bold flex items-center justify-between">
                         <span className="flex items-center gap-1">
-                          <MailCheck className="w-3.5 h-3.5" /> Verification Email Dispatched
+                          <MailCheck className="w-3.5 h-3.5" /> Verification Code
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => setShowCodeHelp(!showCodeHelp)}
-                          className="text-[#c5a059] hover:underline flex items-center gap-1 text-[10px] lowercase"
-                        >
-                          {showCodeHelp ? "hide help" : "need code assistance?"}
-                        </button>
+                        <span className="text-[#c5a059] font-bold tracking-widest text-sm">{activeCode}</span>
                       </div>
                       <p className="text-[#a0a0a0] text-[11px] leading-relaxed">
-                        A 6-digit confirmation code was sent to <span className="text-white font-bold">{user.email}</span>. Please check your inbox or spam folder.
+                        A 6-digit confirmation code was generated for <span className="text-white font-bold">{user.email}</span>.
                       </p>
-                      {showCodeHelp && (
-                        <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                          <span className="text-[#888888] text-[11px]">Verification Code:</span>
-                          <span className="text-[#c5a059] font-bold tracking-widest text-xs">{activeCode}</span>
-                          <button
-                            type="button"
-                            onClick={() => setVerifyInput(activeCode)}
-                            className="px-2 py-0.5 bg-[#222] border border-white/10 text-[10px] text-[#c5a059] rounded"
-                          >
-                            Auto-Fill
-                          </button>
-                        </div>
-                      )}
                     </div>
 
                     <div className="flex gap-2">
@@ -315,9 +296,16 @@ Thank you for using StudentLog!
                         maxLength={6}
                         value={verifyInput}
                         onChange={(e) => setVerifyInput(e.target.value)}
-                        placeholder="Enter 6-digit code"
+                        placeholder="123456"
                         className="auth-input font-mono tracking-widest text-center flex-1 text-sm font-bold"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setVerifyInput(activeCode)}
+                        className="px-2.5 py-1.5 bg-[#222] border border-white/10 text-xs font-mono text-[#c5a059] font-bold rounded-sm hover:bg-[#2c2c2c]"
+                      >
+                        Auto-Fill
+                      </button>
                       <button
                         type="button"
                         onClick={handleConfirmVerify}

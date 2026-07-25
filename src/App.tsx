@@ -369,58 +369,56 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
             <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-3">
               <div className="flex items-center justify-between text-[11px] font-mono text-[#888888]">
                 <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                  <MailCheck className="w-4 h-4 text-emerald-400" /> Verification Email Sent
+                  <MailCheck className="w-4 h-4 text-emerald-400" /> Verification Email Dispatched
                 </span>
                 <span>Just Now</span>
               </div>
               <p className="font-mono text-xs text-[#cccccc] leading-relaxed">
-                A 6-digit verification code was dispatched to <span className="text-white font-bold">{pendingUser?.email}</span>. Please check your inbox or spam folder.
+                A 6-digit security code was generated for <span className="text-white font-bold">{pendingUser?.email}</span>.
               </p>
 
-              <div className="pt-2 border-t border-white/10 flex items-center justify-between font-mono text-[11px]">
-                <span className="text-[#888888]">Didn't receive the email?</span>
-                <button
-                  type="button"
-                  onClick={() => setShowCodeHelp(!showCodeHelp)}
-                  className="text-[#c5a059] hover:underline flex items-center gap-1 text-[11px]"
-                >
-                  {showCodeHelp ? "Hide Code Assistance" : "Need Code Assistance?"}
-                </button>
-              </div>
-
-              {showCodeHelp && (
-                <div className="p-3 bg-[#181818] border border-[#c5a059]/40 rounded-sm space-y-2">
-                  <p className="font-mono text-[11px] text-[#a0a0a0] leading-normal">
-                    If key is not set or if using Resend's free tier restricted domain:
-                  </p>
-                  <div className="flex items-center justify-between pt-1 border-t border-white/5">
-                    <span className="font-mono text-xs text-[#888888]">Verification Code:</span>
-                    <span className="font-mono font-bold text-sm text-[#c5a059] tracking-widest">{activeCode}</span>
-                    <button
-                      type="button"
-                      onClick={() => setEnteredCode(activeCode)}
-                      className="px-2 py-1 bg-[#252525] border border-white/10 text-[10px] font-mono text-white rounded hover:bg-[#303030]"
-                    >
-                      Auto-Fill
-                    </button>
-                  </div>
+              {/* Code Banner & Quick Fill */}
+              <div className="p-3 bg-[#1a1813] border border-[#c5a059]/40 rounded-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs text-[#a0a0a0]">Your Security Code:</span>
+                  <span className="font-mono font-extrabold text-base text-[#c5a059] tracking-[0.25em]">{activeCode}</span>
                 </div>
-              )}
+                <div className="flex items-center justify-between pt-2 border-t border-[#c5a059]/20 text-[11px] font-mono">
+                  <span className="text-[#888888]">If inbox email is delayed:</span>
+                  <button
+                    type="button"
+                    onClick={() => setEnteredCode(activeCode)}
+                    className="px-2.5 py-1 bg-[#c5a059] text-black font-bold rounded-sm text-[11px] hover:brightness-110 transition shadow-sm"
+                  >
+                    Auto-Fill Code ({activeCode})
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div>
               <label className="block font-mono text-[10px] uppercase tracking-[0.15em] text-[#888888] mb-1.5">
                 Enter 6-Digit Security Code
               </label>
-              <input
-                type="text"
-                maxLength={6}
-                value={enteredCode}
-                onChange={(e) => setEnteredCode(e.target.value)}
-                placeholder="123456"
-                className="auth-input font-mono text-center tracking-[0.4em] text-xl font-bold text-white w-full py-3"
-                required
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={enteredCode}
+                  onChange={(e) => setEnteredCode(e.target.value)}
+                  placeholder="123456"
+                  className="auth-input font-mono text-center tracking-[0.4em] text-xl font-bold text-white flex-1 py-2.5"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setEnteredCode(activeCode)}
+                  className="px-3.5 py-2.5 bg-[#1f1f1f] hover:bg-[#282828] border border-white/10 text-xs font-mono text-[#c5a059] font-bold rounded-sm transition whitespace-nowrap"
+                  title="Auto-fill verification code"
+                >
+                  Use Code
+                </button>
+              </div>
             </div>
 
             {error && <p className="font-mono text-xs text-red-300 bg-red-950/80 p-3 rounded-sm border border-red-800/50">{error}</p>}
