@@ -11,6 +11,7 @@ import { Hostel, User, AmenityInfo, AuthenticateParams, AuthResult, Booking } fr
 import { UserProfileModal } from "./components/UserProfileModal";
 import { fetchHostels, saveHostel, removeHostel, fetchUsers, saveUser, fetchBookings, saveBooking } from "./lib/firebase";
 import { ChatModal } from "./components/ChatModal";
+import { sendVerificationEmail } from "./lib/emailService";
 
 declare global {
   interface Window {
@@ -210,7 +211,8 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
       setPendingUser(result.user);
       setActiveCode(result.verificationCode);
       setMode("verify");
-      setInfoMessage(`Account created! A 6-digit verification code has been generated for ${result.user.email}.`);
+      sendVerificationEmail(result.user.email, result.user.name, result.verificationCode);
+      setInfoMessage(`Account created! Verification code sent to ${result.user.email}.`);
     }
   };
 
@@ -239,7 +241,8 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
       setLoading(false);
       if (newCode) {
         setActiveCode(newCode);
-        setInfoMessage("A fresh verification code has been issued!");
+        sendVerificationEmail(pendingUser.email, pendingUser.name, newCode);
+        setInfoMessage("A fresh verification email has been dispatched!");
       }
     }
   };
@@ -919,10 +922,14 @@ export default function HostelLogApp() {
       const session = await safeStorage.get("current-user", false);
       if (session?.value) {
         const parsedUser: User = JSON.parse(session.value);
-        setCurrentUser(parsedUser);
-
-        const b = await fetchBookings(parsedUser.id);
-        setUserBookings(b);
+        if (parsedUser && parsedUser.isVerified === false) {
+          await safeStorage.delete("current-user", false);
+          setCurrentUser(null);
+        } else {
+          setCurrentUser(parsedUser);
+          const b = await fetchBookings(parsedUser.id);
+          setUserBookings(b);
+        }
       }
 
       const savedHostels = await fetchHostels();
@@ -1035,6 +1042,15 @@ export default function HostelLogApp() {
       if (!existingUser) return { error: "No account found with this email." };
       if (existingUser.passHash !== passHash) return { error: "Incorrect passphrase." };
 
+      if (existingUser.isVerified === false) {
+        const code = existingUser.verificationCode || Math.floor(100000 + Math.random() * 900000).toString();
+        const updatedUser: User = { ...existingUser, verificationCode: code };
+        const updatedUsers = users.map((u) => (u.id === existingUser.id ? updatedUser : u));
+        await persistUsers(updatedUsers);
+
+        return { requiresVerification: true, verificationCode: code, user: updatedUser };
+      }
+
       await persistSession({
         id: existingUser.id,
         name: existingUser.name,
@@ -1046,7 +1062,7 @@ export default function HostelLogApp() {
         location: existingUser.location,
         savedHostelIds: existingUser.savedHostelIds,
         privacySettings: existingUser.privacySettings,
-        isVerified: existingUser.isVerified ?? true
+        isVerified: true
       });
       setShowAuthModal(false);
       showToast(`Welcome back, ${existingUser.name}!`);

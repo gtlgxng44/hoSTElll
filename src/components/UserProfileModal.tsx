@@ -6,6 +6,7 @@ import {
   CheckCircle2, AlertTriangle, MailCheck
 } from "lucide-react";
 import { User, Booking, Hostel, PrivacySettings } from "../types";
+import { sendVerificationEmail } from "../lib/emailService";
 
 interface UserProfileModalProps {
   user: User;
@@ -63,6 +64,7 @@ export function UserProfileModal({
     const code = user.verificationCode || Math.floor(100000 + Math.random() * 900000).toString();
     setActiveCode(code);
     onSaveProfile({ verificationCode: code });
+    sendVerificationEmail(user.email, user.name, code);
     setShowVerifyBox(true);
     setVerifyError("");
   };
