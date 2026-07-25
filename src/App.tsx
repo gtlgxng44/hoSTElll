@@ -211,14 +211,12 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
       setPendingUser(result.user);
       setActiveCode(result.verificationCode);
       setMode("verify");
-      setInfoMessage(`Account created! Sending verification code to ${result.user.email}...`);
+      setInfoMessage(`Sending verification code to ${result.user.email}...`);
       sendVerificationEmail(result.user.email, result.user.name, result.verificationCode).then((res) => {
         if (res.sent) {
           setInfoMessage(`Verification code sent to ${result.user.email}. Please check your inbox or spam folder.`);
-        } else if (res.error === "NO_API_KEY") {
-          setInfoMessage(`Notice: RESEND_API_KEY environment variable is not configured. Use 'Need code assistance?' below if you didn't receive an email.`);
         } else {
-          setInfoMessage(`Notice: Email API response: ${res.error || "Delivery pending"}. Use 'Need code assistance?' if needed.`);
+          setInfoMessage(`Could not send email: ${res.error || "Please check email address or API configuration."}`);
         }
       });
     }
@@ -366,59 +364,31 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
             )}
 
             {/* Professional Email Delivery Card */}
-            <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-3">
+            <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-2">
               <div className="flex items-center justify-between text-[11px] font-mono text-[#888888]">
                 <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                  <MailCheck className="w-4 h-4 text-emerald-400" /> Verification Email Dispatched
+                  <MailCheck className="w-4 h-4 text-emerald-400" /> Verification Email Sent
                 </span>
                 <span>Just Now</span>
               </div>
               <p className="font-mono text-xs text-[#cccccc] leading-relaxed">
-                A 6-digit security code was generated for <span className="text-white font-bold">{pendingUser?.email}</span>.
+                A 6-digit confirmation code was sent to <span className="text-white font-bold">{pendingUser?.email}</span>. Please check your inbox or spam folder.
               </p>
-
-              {/* Code Banner & Quick Fill */}
-              <div className="p-3 bg-[#1a1813] border border-[#c5a059]/40 rounded-sm space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs text-[#a0a0a0]">Your Security Code:</span>
-                  <span className="font-mono font-extrabold text-base text-[#c5a059] tracking-[0.25em]">{activeCode}</span>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-[#c5a059]/20 text-[11px] font-mono">
-                  <span className="text-[#888888]">If inbox email is delayed:</span>
-                  <button
-                    type="button"
-                    onClick={() => setEnteredCode(activeCode)}
-                    className="px-2.5 py-1 bg-[#c5a059] text-black font-bold rounded-sm text-[11px] hover:brightness-110 transition shadow-sm"
-                  >
-                    Auto-Fill Code ({activeCode})
-                  </button>
-                </div>
-              </div>
             </div>
 
             <div>
               <label className="block font-mono text-[10px] uppercase tracking-[0.15em] text-[#888888] mb-1.5">
                 Enter 6-Digit Security Code
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={enteredCode}
-                  onChange={(e) => setEnteredCode(e.target.value)}
-                  placeholder="123456"
-                  className="auth-input font-mono text-center tracking-[0.4em] text-xl font-bold text-white flex-1 py-2.5"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setEnteredCode(activeCode)}
-                  className="px-3.5 py-2.5 bg-[#1f1f1f] hover:bg-[#282828] border border-white/10 text-xs font-mono text-[#c5a059] font-bold rounded-sm transition whitespace-nowrap"
-                  title="Auto-fill verification code"
-                >
-                  Use Code
-                </button>
-              </div>
+              <input
+                type="text"
+                maxLength={6}
+                value={enteredCode}
+                onChange={(e) => setEnteredCode(e.target.value)}
+                placeholder="123456"
+                className="auth-input font-mono text-center tracking-[0.4em] text-xl font-bold text-white w-full py-2.5"
+                required
+              />
             </div>
 
             {error && <p className="font-mono text-xs text-red-300 bg-red-950/80 p-3 rounded-sm border border-red-800/50">{error}</p>}

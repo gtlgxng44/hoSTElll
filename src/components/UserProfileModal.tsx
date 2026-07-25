@@ -278,15 +278,12 @@ Thank you for using StudentLog!
 
                 {!user.isVerified && showVerifyBox && (
                   <div className="pt-3 border-t border-white/10 space-y-3 bg-[#101010] p-3 rounded-sm">
-                    <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm font-mono text-xs space-y-2">
-                      <div className="text-[10px] uppercase text-emerald-400 font-bold flex items-center justify-between">
-                        <span className="flex items-center gap-1">
-                          <MailCheck className="w-3.5 h-3.5" /> Verification Code
-                        </span>
-                        <span className="text-[#c5a059] font-bold tracking-widest text-sm">{activeCode}</span>
+                    <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm font-mono text-xs space-y-1.5">
+                      <div className="text-[10px] uppercase text-emerald-400 font-bold flex items-center gap-1">
+                        <MailCheck className="w-3.5 h-3.5" /> Verification Email Dispatched
                       </div>
                       <p className="text-[#a0a0a0] text-[11px] leading-relaxed">
-                        A 6-digit confirmation code was generated for <span className="text-white font-bold">{user.email}</span>.
+                        A 6-digit confirmation code was sent to <span className="text-white font-bold">{user.email}</span>. Please check your inbox or spam folder.
                       </p>
                     </div>
 
@@ -299,13 +296,6 @@ Thank you for using StudentLog!
                         placeholder="123456"
                         className="auth-input font-mono tracking-widest text-center flex-1 text-sm font-bold"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setVerifyInput(activeCode)}
-                        className="px-2.5 py-1.5 bg-[#222] border border-white/10 text-xs font-mono text-[#c5a059] font-bold rounded-sm hover:bg-[#2c2c2c]"
-                      >
-                        Auto-Fill
-                      </button>
                       <button
                         type="button"
                         onClick={handleConfirmVerify}
