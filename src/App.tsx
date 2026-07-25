@@ -184,6 +184,7 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [activeCode, setActiveCode] = useState("");
   const [enteredCode, setEnteredCode] = useState("");
+  const [showCodeHelp, setShowCodeHelp] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,8 +211,16 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
       setPendingUser(result.user);
       setActiveCode(result.verificationCode);
       setMode("verify");
-      sendVerificationEmail(result.user.email, result.user.name, result.verificationCode);
-      setInfoMessage(`Account created! Verification code sent to ${result.user.email}.`);
+      setInfoMessage(`Account created! Sending verification code to ${result.user.email}...`);
+      sendVerificationEmail(result.user.email, result.user.name, result.verificationCode).then((res) => {
+        if (res.sent) {
+          setInfoMessage(`Verification code sent to ${result.user.email}. Please check your inbox or spam folder.`);
+        } else if (res.error === "NO_API_KEY") {
+          setInfoMessage(`Notice: RESEND_API_KEY environment variable is not configured. Use 'Need code assistance?' below if you didn't receive an email.`);
+        } else {
+          setInfoMessage(`Notice: Email API response: ${res.error || "Delivery pending"}. Use 'Need code assistance?' if needed.`);
+        }
+      });
     }
   };
 
@@ -357,7 +366,7 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
             )}
 
             {/* Professional Email Delivery Card */}
-            <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-2.5">
+            <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-3">
               <div className="flex items-center justify-between text-[11px] font-mono text-[#888888]">
                 <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
                   <MailCheck className="w-4 h-4 text-emerald-400" /> Verification Email Sent
@@ -367,6 +376,36 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
               <p className="font-mono text-xs text-[#cccccc] leading-relaxed">
                 A 6-digit verification code was dispatched to <span className="text-white font-bold">{pendingUser?.email}</span>. Please check your inbox or spam folder.
               </p>
+
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between font-mono text-[11px]">
+                <span className="text-[#888888]">Didn't receive the email?</span>
+                <button
+                  type="button"
+                  onClick={() => setShowCodeHelp(!showCodeHelp)}
+                  className="text-[#c5a059] hover:underline flex items-center gap-1 text-[11px]"
+                >
+                  {showCodeHelp ? "Hide Code Assistance" : "Need Code Assistance?"}
+                </button>
+              </div>
+
+              {showCodeHelp && (
+                <div className="p-3 bg-[#181818] border border-[#c5a059]/40 rounded-sm space-y-2">
+                  <p className="font-mono text-[11px] text-[#a0a0a0] leading-normal">
+                    If key is not set or if using Resend's free tier restricted domain:
+                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                    <span className="font-mono text-xs text-[#888888]">Verification Code:</span>
+                    <span className="font-mono font-bold text-sm text-[#c5a059] tracking-widest">{activeCode}</span>
+                    <button
+                      type="button"
+                      onClick={() => setEnteredCode(activeCode)}
+                      className="px-2 py-1 bg-[#252525] border border-white/10 text-[10px] font-mono text-white rounded hover:bg-[#303030]"
+                    >
+                      Auto-Fill
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

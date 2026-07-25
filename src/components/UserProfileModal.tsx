@@ -58,6 +58,7 @@ export function UserProfileModal({
   const [verifyInput, setVerifyInput] = useState("");
   const [activeCode, setActiveCode] = useState(user.verificationCode || "682049");
   const [verifyError, setVerifyError] = useState("");
+  const [showCodeHelp, setShowCodeHelp] = useState(false);
 
   const handleStartVerify = () => {
     const code = user.verificationCode || Math.floor(100000 + Math.random() * 900000).toString();
@@ -277,13 +278,35 @@ Thank you for using StudentLog!
 
                 {!user.isVerified && showVerifyBox && (
                   <div className="pt-3 border-t border-white/10 space-y-3 bg-[#101010] p-3 rounded-sm">
-                    <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm font-mono text-xs space-y-1.5">
-                      <div className="text-[10px] uppercase text-emerald-400 font-bold flex items-center gap-1">
-                        <MailCheck className="w-3.5 h-3.5" /> Verification Email Dispatched
+                    <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm font-mono text-xs space-y-2">
+                      <div className="text-[10px] uppercase text-emerald-400 font-bold flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <MailCheck className="w-3.5 h-3.5" /> Verification Email Dispatched
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowCodeHelp(!showCodeHelp)}
+                          className="text-[#c5a059] hover:underline flex items-center gap-1 text-[10px] lowercase"
+                        >
+                          {showCodeHelp ? "hide help" : "need code assistance?"}
+                        </button>
                       </div>
                       <p className="text-[#a0a0a0] text-[11px] leading-relaxed">
                         A 6-digit confirmation code was sent to <span className="text-white font-bold">{user.email}</span>. Please check your inbox or spam folder.
                       </p>
+                      {showCodeHelp && (
+                        <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                          <span className="text-[#888888] text-[11px]">Verification Code:</span>
+                          <span className="text-[#c5a059] font-bold tracking-widest text-xs">{activeCode}</span>
+                          <button
+                            type="button"
+                            onClick={() => setVerifyInput(activeCode)}
+                            className="px-2 py-0.5 bg-[#222] border border-white/10 text-[10px] text-[#c5a059] rounded"
+                          >
+                            Auto-Fill
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-2">
