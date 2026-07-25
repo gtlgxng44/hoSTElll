@@ -66,11 +66,9 @@ export function ChatModal({
 
     const unsubscribe = subscribeToConversations(currentUser.id, async (convs) => {
       // Filter conversations relevant to current user
-      const userConvs = convs.filter(
+      let userConvs = convs.filter(
         (c) => c.studentId === currentUser.id || c.hostId === currentUser.id
       ).sort((a, b) => b.lastUpdated - a.lastUpdated);
-      
-      setConversations(userConvs);
 
       if (isFirstLoad) {
         isFirstLoad = false;
@@ -95,9 +93,10 @@ export function ChatModal({
               studentName: currentUser.name || "Student Resident",
               hostId,
               hostName,
-              lastMessage: "Conversation started",
+              lastMessage: "Inquiry initiated",
               lastUpdated: Date.now(),
             };
+            userConvs = [existing, ...userConvs];
             await saveConversation(existing);
             targetConvId = existing.id;
           } else {
@@ -110,6 +109,7 @@ export function ChatModal({
         setActiveConvId(targetConvId);
         setLoading(false);
       }
+      setConversations(userConvs);
     });
 
     return () => unsubscribe();
@@ -196,7 +196,24 @@ export function ChatModal({
     await saveMessage(newMsg);
     await saveConversation(currentConvUpdate);
 
-    // No auto-reply simulation for Firebase real-time chat
+    // Auto-reply simulation for guest inquiries
+    if (currentUser.role === "guest") {
+      setTimeout(async () => {
+        const randomReply = OWNER_AUTO_RESPONSES[Math.floor(Math.random() * OWNER_AUTO_RESPONSES.length)];
+        const replyMsg: ChatMessage = {
+          id: uid(),
+          conversationId: activeConvId,
+          senderId: currentConv.hostId || "owner-default",
+          senderName: currentConv.hostName || "Property Manager",
+          senderRole: "host",
+          text: randomReply,
+          timestamp: Date.now(),
+        };
+        await saveMessage(replyMsg);
+        const updatedConvReply = { ...currentConvUpdate, lastMessage: randomReply, lastUpdated: Date.now() };
+        await saveConversation(updatedConvReply);
+      }, 1000);
+    }
   };
 
   if (!isOpen) return null;

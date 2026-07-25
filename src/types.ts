@@ -65,15 +65,18 @@ export interface Hostel {
   location: string;
   capacity: number;
   price: number;
-  rating: number;
+  rating?: number;
   description: string;
   amenities: string[];
   images: string[];
-  checkInTime: string;
-  houseRules: string;
-  stamped: boolean;
+  checkInTime?: string;
+  checkOutTime?: string;
+  houseRules?: string;
+  stamped?: boolean;
   ownerId?: string;
   ownerName?: string;
+  ownerPhone?: string;
+  createdAt?: number;
 }
 
 export interface AmenityInfo {

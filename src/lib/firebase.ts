@@ -55,12 +55,18 @@ export const fetchConversations = async (userId: string): Promise<Conversation[]
 };
 
 export const subscribeToConversations = (userId: string, callback: (convs: Conversation[]) => void) => {
-  // Listen to all and filter, since we don't have complex indexes setup right now.
   const q = query(collection(db, "conversations"));
-  return onSnapshot(q, (snapshot) => {
-    const allConvs = snapshot.docs.map(d => d.data() as Conversation);
-    callback(allConvs.filter(c => c.studentId === userId || c.hostId === userId));
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const allConvs = snapshot.docs.map(d => d.data() as Conversation);
+      callback(allConvs.filter(c => c.studentId === userId || c.hostId === userId));
+    },
+    (err) => {
+      console.warn("Firestore subscribeToConversations error, falling back to fetch", err);
+      fetchConversations(userId).then(callback).catch(() => callback([]));
+    }
+  );
 };
 
 export const saveConversation = async (conv: Conversation): Promise<void> => {
@@ -75,10 +81,17 @@ export const fetchMessages = async (convId: string): Promise<ChatMessage[]> => {
 
 export const subscribeToMessages = (convId: string, callback: (msgs: ChatMessage[]) => void) => {
   const q = query(collection(db, "messages"), where("conversationId", "==", convId));
-  return onSnapshot(q, (snapshot) => {
-    const msgs = snapshot.docs.map(d => d.data() as ChatMessage).sort((a, b) => a.timestamp - b.timestamp);
-    callback(msgs);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const msgs = snapshot.docs.map(d => d.data() as ChatMessage).sort((a, b) => a.timestamp - b.timestamp);
+      callback(msgs);
+    },
+    (err) => {
+      console.warn("Firestore subscribeToMessages error, falling back to fetch", err);
+      fetchMessages(convId).then(callback).catch(() => callback([]));
+    }
+  );
 };
 
 export const saveMessage = async (msg: ChatMessage): Promise<void> => {

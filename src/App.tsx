@@ -72,8 +72,91 @@ const AMENITY_ICONS: Record<string, AmenityInfo> = {
   lock: { label: "Personal Lockers", icon: Lock },
 };
 
-// Default blank list so renters / property owners can submit student hostel properties
-const INITIAL_HOSTELS: Hostel[] = [];
+// Default verified student hostels with real house pictures
+const INITIAL_HOSTELS: Hostel[] = [
+  {
+    id: "h-mara-river",
+    title: "Mara River Student Heights",
+    location: "Westlands Campus Zone, Nairobi",
+    price: 14500,
+    capacity: 4,
+    amenities: ["wifi", "desk", "laundry", "security", "shuttle"],
+    images: [
+      "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80"
+    ],
+    description: "Modern student residency featuring high-speed fibre Wi-Fi, ergonomic study desks, biometric security access, and daily campus shuttle service.",
+    houseRules: "Quiet study hours after 10:00 PM. No smoking or pets permitted on residence premises.",
+    checkInTime: "12:00 PM",
+    checkOutTime: "10:00 AM",
+    ownerId: "owner-mara",
+    ownerName: "Mara Heights Management",
+    ownerPhone: "+254 712 345 678",
+    createdAt: Date.now() - 100000,
+  },
+  {
+    id: "h-university-view",
+    title: "University View Executive Suites",
+    location: "Juja Campus Way, Kiambu",
+    price: 18000,
+    capacity: 2,
+    amenities: ["wifi", "desk", "kitchen", "laundry", "security"],
+    images: [
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1200&q=80"
+    ],
+    description: "Spacious twin-share executive suites with self-contained kitchenette, private study lounge, hot shower, and 24/7 guarded security.",
+    houseRules: "Visitors allowed in common lounge until 9:00 PM. ID verification required.",
+    checkInTime: "1:00 PM",
+    checkOutTime: "11:00 AM",
+    ownerId: "owner-uniview",
+    ownerName: "Juja Student Homes",
+    ownerPhone: "+254 722 987 654",
+    createdAt: Date.now() - 200000,
+  },
+  {
+    id: "h-kilimani-scholar",
+    title: "Kilimani Scholar Haven",
+    location: "Kilimani Ring Road, Nairobi",
+    price: 12000,
+    capacity: 6,
+    amenities: ["wifi", "desk", "lock", "laundry", "security"],
+    images: [
+      "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=80"
+    ],
+    description: "Affordable shared student dorms with individual lockable lockers, high-speed internet, power backup, and laundry washing bay.",
+    houseRules: "Keep personal lockers locked at all times. Maintain cleanliness in shared kitchen and study rooms.",
+    checkInTime: "2:00 PM",
+    checkOutTime: "10:00 AM",
+    ownerId: "owner-kilimani",
+    ownerName: "Scholar Haven Properties",
+    ownerPhone: "+254 733 111 222",
+    createdAt: Date.now() - 300000,
+  },
+  {
+    id: "h-madaraka-residency",
+    title: "Madaraka Student Residency",
+    location: "Madaraka Estate, Nairobi",
+    price: 16000,
+    capacity: 2,
+    amenities: ["wifi", "desk", "kitchen", "security", "shuttle"],
+    images: [
+      "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=80"
+    ],
+    description: "Serene student apartments within 5 minutes walk to campus gates. Features quiet reading rooms, equipped shared kitchen, and reliable Wi-Fi.",
+    houseRules: "Respect fellow student residents. Keep ambient noise minimal.",
+    checkInTime: "12:00 PM",
+    checkOutTime: "11:00 AM",
+    ownerId: "owner-madaraka",
+    ownerName: "Madaraka Hostels Ltd",
+    ownerPhone: "+254 700 444 555",
+    createdAt: Date.now() - 400000,
+  }
+];
 
 /* --- AUTH MODAL --- */
 
@@ -697,7 +780,11 @@ export default function HostelLogApp() {
       }
 
       const savedHostels = await fetchHostels();
-      setHostels(savedHostels);
+      if (savedHostels && savedHostels.length > 0) {
+        setHostels(savedHostels);
+      } else {
+        setHostels(INITIAL_HOSTELS);
+      }
     })();
   }, []);
 
@@ -827,9 +914,20 @@ export default function HostelLogApp() {
   };
 
   const filteredHostels = hostels.filter((h) => {
-    const matchesSearch = h.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          h.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesAmenity = !activeAmenityFilter || h.amenities.includes(activeAmenityFilter);
+    const q = searchQuery.trim().toLowerCase();
+
+    const matchesSearch = !q || (
+      h.title?.toLowerCase().includes(q) ||
+      h.location?.toLowerCase().includes(q) ||
+      h.description?.toLowerCase().includes(q) ||
+      h.houseRules?.toLowerCase().includes(q) ||
+      h.ownerName?.toLowerCase().includes(q) ||
+      h.price?.toString().includes(q) ||
+      h.capacity?.toString().includes(q) ||
+      h.amenities?.some(a => AMENITY_ICONS[a]?.label.toLowerCase().includes(q))
+    );
+
+    const matchesAmenity = !activeAmenityFilter || h.amenities?.includes(activeAmenityFilter);
     return matchesSearch && matchesAmenity;
   });
 
@@ -940,83 +1038,137 @@ export default function HostelLogApp() {
       </header>
 
       {/* Main Container */}
-      {!currentUser ? (
-        <main className="flex-1 flex flex-col justify-center items-center px-5 sm:px-8 py-20 text-center relative overflow-hidden min-h-[80vh]">
-          {/* Background subtle glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#c5a059]/5 rounded-full blur-[100px] pointer-events-none"></div>
+      <main className="max-w-6xl mx-auto px-5 sm:px-8 py-8 space-y-10">
+
+        {/* Hero Banner with Featured Hostel Image Showcase */}
+        <section className="relative overflow-hidden rounded-sm border border-white/10 bg-[#0a0a0a] p-6 sm:p-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#c5a059]/10 rounded-full blur-[90px] pointer-events-none"></div>
           
-          <div className="z-10 max-w-3xl mx-auto space-y-8 rise-in">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-sm bg-[#141414] border border-[#c5a059]/30 text-[#c5a059] text-[10px] font-mono uppercase tracking-widest mb-4 shadow-lg shadow-[#c5a059]/5">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Verified Student Housing Portal</span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+            <div className="lg:col-span-7 space-y-5">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-sm bg-[#141414] border border-[#c5a059]/30 text-[#c5a059] text-[10px] font-mono uppercase tracking-widest shadow-md">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#c5a059]" />
+                <span>Verified Student Accommodations & House Galleries</span>
+              </div>
+              
+              <h1 className="text-4xl sm:text-6xl font-serif font-bold tracking-tight text-white leading-[1.15]">
+                Find Your Perfect <br className="hidden sm:block" />
+                <span className="text-[#c5a059] italic pr-2">Campus Home</span>
+              </h1>
+              
+              <p className="text-[#a0a0a0] text-sm sm:text-base leading-relaxed max-w-xl">
+                Browse verified student hostels with real interior picture galleries, high-speed Wi-Fi, study desks, and security. Message property managers directly or book your room vacancy.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                {!currentUser ? (
+                  <button
+                    onClick={() => setShowAuthModal(true)}
+                    className="px-6 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/20 flex items-center gap-2"
+                  >
+                    <KeyRound className="w-4 h-4" /> Sign In / Create Account
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setEditingHostel(null); setShowAdminModal(true); }}
+                    className="px-6 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/20 flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Post Student Hostel & House Gallery
+                  </button>
+                )}
+                
+                <a
+                  href="#hostels-list"
+                  className="px-5 py-3 rounded-sm font-mono text-xs uppercase tracking-widest text-[#f5f5f5] bg-[#161616] hover:bg-[#202020] border border-white/10 transition flex items-center gap-2"
+                >
+                  <Search className="w-3.5 h-3.5 text-[#c5a059]" /> Explore Listings ({hostels.length})
+                </a>
+              </div>
             </div>
-            
-            <h1 className="text-5xl sm:text-7xl font-serif font-bold tracking-tight text-white leading-[1.1]">
-              Find Your Perfect <br className="hidden sm:block" />
-              <span className="text-[#c5a059] italic pr-2">Campus Home</span>
-            </h1>
-            
-            <p className="text-[#888888] text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
-              The premier directory for verified student accommodations. Browse premium listings, connect directly with hosts, and secure your residence with confidence.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="w-full sm:w-auto px-8 py-4 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/20 flex items-center justify-center gap-2"
+
+            {/* Featured Hostel Photo Preview Card */}
+            {hostels.length > 0 && (
+              <div
+                onClick={() => setSelectedHostel(hostels[0])}
+                className="lg:col-span-5 group cursor-pointer relative rounded-sm border border-[#c5a059]/40 overflow-hidden shadow-2xl bg-[#121212] transition hover:border-[#c5a059]"
               >
-                <KeyRound className="w-4 h-4" /> Access Portal
-              </button>
-            </div>
+                <div className="relative h-64 sm:h-72 w-full overflow-hidden">
+                  <img
+                    src={hostels[0].images?.[0] || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80"}
+                    alt={hostels[0].title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-85 group-hover:opacity-100"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                  
+                  <div className="absolute top-3 left-3 bg-[#c5a059] text-black text-[9px] font-mono uppercase px-2.5 py-1 rounded-sm shadow font-bold tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Featured Residence
+                  </div>
+
+                  {hostels[0].images && hostels[0].images.length > 1 && (
+                    <div className="absolute top-3 right-3 bg-black/80 backdrop-blur-sm border border-white/10 text-white font-mono text-[10px] px-2.5 py-1 rounded-sm flex items-center gap-1">
+                      <Camera className="w-3 h-3 text-[#c5a059]" /> {hostels[0].images.length} House Pics
+                    </div>
+                  )}
+
+                  <div className="absolute bottom-4 left-4 right-4 text-white space-y-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-serif font-bold text-xl text-white group-hover:text-[#c5a059] transition">
+                        {hostels[0].title}
+                      </h3>
+                      <span className="font-serif font-bold text-base text-[#c5a059] bg-black/80 px-2.5 py-0.5 rounded-sm border border-[#c5a059]/30">
+                        Ksh {hostels[0].price?.toLocaleString()} <span className="text-[9px] font-mono text-white/60">/mo</span>
+                      </span>
+                    </div>
+                    <p className="font-mono text-xs text-[#a0a0a0] flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-[#c5a059]" /> {hostels[0].location}
+                    </p>
+                  </div>
+                </div>
+                <div className="p-3.5 bg-[#0e0e0e] flex items-center justify-between text-xs font-mono text-[#a0a0a0] border-t border-white/5">
+                  <span className="flex items-center gap-1.5 text-[#c5a059] font-bold">
+                    <Eye className="w-3.5 h-3.5" /> View Photo Gallery & Details
+                  </span>
+                  <span className="text-[10px] uppercase text-[#666]">Cap: {hostels[0].capacity} Beds</span>
+                </div>
+              </div>
+            )}
           </div>
-          
-          <div className="z-10 mt-24 w-full max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16 border-t border-white/5 pt-12 text-center rise-in" style={{ animationDelay: '0.1s' }}>
-            <div>
-              <div className="text-3xl font-serif font-bold text-white mb-1">50+</div>
-              <div className="text-[10px] font-mono uppercase text-[#666666] tracking-widest">Premium Properties</div>
-            </div>
-            <div>
-              <div className="text-3xl font-serif font-bold text-white mb-1">100%</div>
-              <div className="text-[10px] font-mono uppercase text-[#666666] tracking-widest">Verified Hosts</div>
-            </div>
-            <div>
-              <div className="text-3xl font-serif font-bold text-white mb-1">24/7</div>
-              <div className="text-[10px] font-mono uppercase text-[#666666] tracking-widest">Direct Messaging</div>
-            </div>
-            <div>
-              <div className="text-3xl font-serif font-bold text-white mb-1">Safe</div>
-              <div className="text-[10px] font-mono uppercase text-[#666666] tracking-widest">Secure Bookings</div>
-            </div>
-          </div>
-        </main>
-      ) : (
-        <main className="max-w-6xl mx-auto px-5 sm:px-8 py-8">
-          
-          {/* Search & Actions Bar */}
-        <section className="mb-8 space-y-4">
+        </section>
+
+        {/* Search & Actions Bar */}
+        <section id="hostels-list" className="space-y-4 pt-2">
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-            <div className="relative flex-1 max-w-md">
+            <div className="relative flex-1 max-w-lg">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search student hostels or campus location..."
-                className="w-full pl-9 pr-4 py-2.5 rounded-md text-xs font-mono border border-white/10 bg-[#141414] text-[#f5f5f5] placeholder-[#888888] focus:border-[#c5a059] outline-none transition"
+                placeholder="Search student hostels, location, price, amenities..."
+                className="w-full pl-9 pr-10 py-3 rounded-md text-xs font-mono border border-white/10 bg-[#141414] text-[#f5f5f5] placeholder-[#888888] focus:border-[#c5a059] outline-none transition"
               />
-              <Search className="w-4 h-4 absolute left-3 top-3 text-[#888888]" />
+              <Search className="w-4 h-4 absolute left-3 top-3.5 text-[#888888]" />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-3 text-[#888888] hover:text-white transition p-0.5"
+                  title="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {currentUser?.role === "host" ? (
               <button
                 onClick={() => { setEditingHostel(null); setShowAdminModal(true); }}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/10"
+                className="flex items-center justify-center gap-2 px-5 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/10"
               >
-                <Plus className="w-4 h-4" /> Add Student Property & Pics (Renter)
+                <Plus className="w-4 h-4" /> Add Student Property & Pics
               </button>
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#141414] hover:bg-[#1a1a1a] border border-white/10 rounded-sm text-xs font-mono text-[#c5a059] transition"
+                className="flex items-center gap-2 px-4 py-3 bg-[#141414] hover:bg-[#1a1a1a] border border-white/10 rounded-sm text-xs font-mono text-[#c5a059] transition"
               >
                 <Building2 className="w-3.5 h-3.5 text-[#c5a059]" />
                 <span>Renter Mode: Sign in to list student housing</span>
@@ -1045,24 +1197,26 @@ export default function HostelLogApp() {
           </div>
         </section>
 
-        {/* Sophisticated Dark Stats Banner */}
-        <section className="mb-10 p-6 glass-dark border border-white/10 rounded-sm flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex gap-10">
+        {/* Directory Stats Banner */}
+        <section className="p-5 glass-dark border border-white/10 rounded-sm flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex gap-8 sm:gap-12">
             <div>
               <p className="text-[10px] uppercase text-[#888888] tracking-[0.2em] font-mono">Student Properties</p>
-              <p className="text-2xl font-serif text-[#f5f5f5] font-bold">{hostels.length} Listed</p>
+              <p className="text-2xl font-serif text-[#f5f5f5] font-bold">{hostels.length} Verified Listed</p>
             </div>
-            <div className="border-l border-white/10 pl-10">
-              <p className="text-[10px] uppercase text-[#888888] tracking-[0.2em] font-mono">Directory Mode</p>
-              <p className="text-2xl font-serif text-[#c5a059] font-bold">Renter Submission</p>
+            <div className="border-l border-white/10 pl-8">
+              <p className="text-[10px] uppercase text-[#888888] tracking-[0.2em] font-mono">Portal Status</p>
+              <p className="text-2xl font-serif text-[#c5a059] font-bold">Live & Verified</p>
             </div>
-            <div className="border-l border-white/10 pl-10 hidden sm:block">
-              <p className="text-[10px] uppercase text-[#888888] tracking-[0.2em] font-mono">Student Saved</p>
-              <p className="text-2xl font-serif text-[#f5f5f5] font-bold">{currentUser?.savedHostelIds?.length || 0} Hostels</p>
-            </div>
+            {currentUser && (
+              <div className="border-l border-white/10 pl-8 hidden sm:block">
+                <p className="text-[10px] uppercase text-[#888888] tracking-[0.2em] font-mono">Student Saved</p>
+                <p className="text-2xl font-serif text-[#f5f5f5] font-bold">{currentUser?.savedHostelIds?.length || 0} Hostels</p>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            {hostels.length > 0 && (
+            {hostels.length > 0 && currentUser?.role === "host" && (
               <button
                 onClick={async () => {
                   for (const h of hostels) {
@@ -1074,7 +1228,7 @@ export default function HostelLogApp() {
                 className="px-3 py-2 bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 text-red-300 font-mono text-[11px] uppercase rounded-sm transition flex items-center gap-1.5"
                 title="Clear catalog and start blank"
               >
-                <Trash2 className="w-3.5 h-3.5" /> Clear to Blank
+                <Trash2 className="w-3.5 h-3.5" /> Clear Directory
               </button>
             )}
             {currentUser && (
@@ -1082,7 +1236,7 @@ export default function HostelLogApp() {
                 onClick={() => setShowProfileModal(true)}
                 className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#252525] border border-white/10 text-[#c5a059] font-mono text-xs uppercase tracking-wider rounded-sm transition flex items-center gap-1.5"
               >
-                <UserIcon className="w-3.5 h-3.5" /> Manage User Profile
+                <UserIcon className="w-3.5 h-3.5" /> User Profile
               </button>
             )}
           </div>
@@ -1092,9 +1246,9 @@ export default function HostelLogApp() {
         <section>
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-serif text-3xl font-bold flex items-center gap-3 text-[#f5f5f5]">
-              <GraduationCap className="w-6 h-6 text-[#c5a059]" /> Student Hostels & Housing
+              <GraduationCap className="w-6 h-6 text-[#c5a059]" /> Student Hostels Directory
             </h2>
-            <span className="font-mono text-xs text-[#888888] tracking-widest">{filteredHostels.length} LISTINGS</span>
+            <span className="font-mono text-xs text-[#888888] tracking-widest">{filteredHostels.length} MATCHES</span>
           </div>
 
           {filteredHostels.length === 0 ? (
@@ -1234,7 +1388,6 @@ export default function HostelLogApp() {
           )}
         </section>
       </main>
-      )}
 
       {/* Render Modals */}
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuthenticate={authenticate} />}
