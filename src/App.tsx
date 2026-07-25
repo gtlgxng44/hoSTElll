@@ -371,7 +371,7 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
             )}
 
             {/* Professional Email Delivery Card */}
-            <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-2">
+            <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-3">
               <div className="flex items-center justify-between text-[11px] font-mono">
                 {emailStatus === "sent" ? (
                   <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
@@ -397,13 +397,32 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
                 {emailStatus === "sent" ? (
                   <>A 6-digit confirmation code was sent to <span className="text-white font-bold">{pendingUser?.email}</span>. Please check your inbox or spam folder.</>
                 ) : emailStatus === "no_key" ? (
-                  <>Server missing <code className="text-[#c5a059] bg-[#1a1a1a] px-1 rounded">RESEND_API_KEY</code>. Add this key in platform environment variables to deliver emails to live inbox addresses.</>
+                  <>Server missing <code className="text-[#c5a059] bg-[#1a1a1a] px-1 rounded">RESEND_API_KEY</code>. Use instant verification below to complete sign up.</>
                 ) : emailStatus === "failed" ? (
-                  <><span className="text-red-300">{emailErrorDetails || "Could not deliver email."}</span> Check recipient email or API setup.</>
+                  <><span className="text-red-300">{emailErrorDetails || "Could not deliver email."}</span> Verify instantly using the generated code below.</>
                 ) : (
                   <>Sending verification message to <span className="text-white font-bold">{pendingUser?.email}</span>...</>
                 )}
               </p>
+
+              {/* Instant Verification Code display & Auto-fill button */}
+              {activeCode && (
+                <div className="pt-2 flex items-center justify-between bg-[#181818] p-2.5 rounded border border-[#c5a059]/30">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#888888] text-[10px] uppercase tracking-wider font-mono">Verification Code:</span>
+                    <span className="font-mono text-base font-bold text-[#c5a059] tracking-widest bg-[#0a0a0a] px-2 py-0.5 rounded border border-[#c5a059]/40">
+                      {activeCode}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnteredCode(activeCode)}
+                    className="px-3 py-1 bg-[#c5a059] hover:brightness-110 text-black font-mono text-[10px] font-bold uppercase rounded transition shadow"
+                  >
+                    Auto-fill Code
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>

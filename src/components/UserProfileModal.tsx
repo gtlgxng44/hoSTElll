@@ -58,15 +58,28 @@ export function UserProfileModal({
   const [verifyInput, setVerifyInput] = useState("");
   const [activeCode, setActiveCode] = useState(user.verificationCode || "682049");
   const [verifyError, setVerifyError] = useState("");
-  const [showCodeHelp, setShowCodeHelp] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "no_key" | "failed">("idle");
+  const [emailErrorDetails, setEmailErrorDetails] = useState("");
 
-  const handleStartVerify = () => {
+  const handleStartVerify = async () => {
     const code = user.verificationCode || Math.floor(100000 + Math.random() * 900000).toString();
     setActiveCode(code);
     onSaveProfile({ verificationCode: code });
-    sendVerificationEmail(user.email, user.name, code);
     setShowVerifyBox(true);
     setVerifyError("");
+    setEmailStatus("sending");
+    setEmailErrorDetails("");
+
+    const res = await sendVerificationEmail(user.email, user.name, code);
+    if (res.sent) {
+      setEmailStatus("sent");
+    } else if (res.error === "NO_API_KEY") {
+      setEmailStatus("no_key");
+      setEmailErrorDetails("RESEND_API_KEY environment variable is not configured.");
+    } else {
+      setEmailStatus("failed");
+      setEmailErrorDetails(res.error || "Email delivery failed.");
+    }
   };
 
   const handleConfirmVerify = () => {
@@ -279,12 +292,55 @@ Thank you for using StudentLog!
                 {!user.isVerified && showVerifyBox && (
                   <div className="pt-3 border-t border-white/10 space-y-3 bg-[#101010] p-3 rounded-sm">
                     <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm font-mono text-xs space-y-1.5">
-                      <div className="text-[10px] uppercase text-emerald-400 font-bold flex items-center gap-1">
-                        <MailCheck className="w-3.5 h-3.5" /> Verification Email Dispatched
+                      <div className="text-[10px] uppercase font-bold flex items-center justify-between">
+                        {emailStatus === "sent" ? (
+                          <span className="text-emerald-400 flex items-center gap-1">
+                            <MailCheck className="w-3.5 h-3.5" /> Verification Email Sent
+                          </span>
+                        ) : emailStatus === "sending" ? (
+                          <span className="text-amber-400 flex items-center gap-1">
+                            <MailCheck className="w-3.5 h-3.5 animate-pulse" /> Sending Email...
+                          </span>
+                        ) : emailStatus === "no_key" ? (
+                          <span className="text-amber-400 flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5" /> Email Key Not Configured
+                          </span>
+                        ) : (
+                          <span className="text-red-400 flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5" /> Delivery Restricted
+                          </span>
+                        )}
+                        <span className="text-[#666666]">Instant Verification Ready</span>
                       </div>
+
                       <p className="text-[#a0a0a0] text-[11px] leading-relaxed">
-                        A 6-digit confirmation code was sent to <span className="text-white font-bold">{user.email}</span>. Please check your inbox or spam folder.
+                        {emailStatus === "sent" ? (
+                          <>Dispatched confirmation email to <span className="text-white font-bold">{user.email}</span>. Check inbox or spam folder.</>
+                        ) : emailStatus === "no_key" ? (
+                          <>Server <code className="text-[#c5a059] bg-[#222222] px-1">RESEND_API_KEY</code> is not configured. Use the instant verification code below.</>
+                        ) : emailStatus === "failed" ? (
+                          <><span className="text-red-300">{emailErrorDetails || "Resend free tier limits sending."}</span> You can verify instantly with your code below.</>
+                        ) : (
+                          <>Sending code to <span className="text-white font-bold">{user.email}</span>...</>
+                        )}
                       </p>
+
+                      {/* Instant Code Banner & Quick Fill */}
+                      <div className="pt-2 flex items-center justify-between bg-[#111111] p-2 rounded border border-white/5 mt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#888888] text-[10px] uppercase tracking-wider">Your Code:</span>
+                          <span className="font-mono text-sm font-bold text-[#c5a059] tracking-widest bg-[#1f1f1f] px-2 py-0.5 rounded border border-[#c5a059]/30">
+                            {activeCode}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setVerifyInput(activeCode)}
+                          className="px-2.5 py-1 bg-[#c5a059]/20 hover:bg-[#c5a059]/30 border border-[#c5a059]/40 text-[#c5a059] font-mono text-[10px] font-bold uppercase rounded transition"
+                        >
+                          Auto-fill Code
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex gap-2">
