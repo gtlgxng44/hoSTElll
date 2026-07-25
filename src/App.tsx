@@ -205,7 +205,7 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode, onGoog
     setError("");
     setInfoMessage("");
 
-    if (!email.includes("@")) return setError("Please enter a valid email address.");
+    if (!email.includes("@") && email.trim().toLowerCase() !== "hostel.com") return setError("Please enter a valid email address.");
     if (passphrase.length < 6) return setError("Passphrase must be at least 6 characters.");
     if (mode === "register" && !name.trim()) return setError("Please enter your name.");
 
@@ -306,6 +306,26 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode, onGoog
                 className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider rounded-sm font-bold transition ${mode === "register" ? "bg-[#c5a059] text-black shadow" : "text-[#888888] hover:text-white"}`}
               >
                 Register
+              </button>
+            </div>
+
+            {/* Admin Credentials Helper */}
+            <div className="mb-4 p-3 bg-[#141414] border border-[#c5a059]/40 rounded-sm font-mono text-xs flex items-center justify-between text-[#c5a059]">
+              <div>
+                <span className="font-bold block text-[10px] uppercase text-[#c5a059]">House Admin Login:</span>
+                <span className="text-white text-[11px]">Email: hostel.com | Pass: 1234567</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("hostel.com");
+                  setPassphrase("1234567");
+                  setRole("host");
+                  setMode("login");
+                }}
+                className="px-2.5 py-1 bg-[#c5a059] text-black font-bold uppercase text-[10px] rounded-sm hover:brightness-110 transition shrink-0"
+              >
+                Autofill
               </button>
             </div>
 
@@ -1042,9 +1062,24 @@ export default function HostelLogApp() {
     showToast("Profile updated successfully!");
   };
 
+  const isAdminUser = (user: User | null | undefined): boolean => {
+    if (!user) return false;
+    const em = user.email.toLowerCase().trim();
+    return em === "hostel.com" || em === "admin@hostel.com" || em.startsWith("hostel.com") || user.role === "host";
+  };
+
+  const handleOpenPostHostelModal = (hostelToEdit: Hostel | null = null) => {
+    if (!currentUser) {
+      setShowAuthModal(true);
+      return;
+    }
+    setEditingHostel(hostelToEdit);
+    setShowAdminModal(true);
+  };
+
   const handleSaveHostel = async (hostelData: Hostel) => {
-    if (currentUser?.role !== "host") {
-      showToast("Permission denied: Only Admin / Host accounts can manage hostel pics & listings.");
+    if (!currentUser) {
+      showToast("Please sign in to publish house listings.");
       return;
     }
 
@@ -1064,8 +1099,8 @@ export default function HostelLogApp() {
 
   const handleDeleteHostel = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (currentUser?.role !== "host") {
-      showToast("Permission denied: Only Admin / Host accounts can delete hostels.");
+    if (!currentUser) {
+      showToast("Please sign in to manage house listings.");
       return;
     }
     const updated = hostels.filter(h => h.id !== id);
@@ -1120,8 +1155,36 @@ export default function HostelLogApp() {
   };
 
   const authenticate = async ({ mode, role, name, email, passphrase }: AuthenticateParams): Promise<AuthResult | undefined> => {
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Check for Admin credentials: email "hostel.com" or "admin@hostel.com" and pass "1234567"
+    if ((cleanEmail === "hostel.com" || cleanEmail === "admin@hostel.com") && passphrase === "1234567") {
+      let adminUser = users.find((u) => u.email.toLowerCase() === cleanEmail || u.email.toLowerCase() === "hostel.com");
+      if (!adminUser) {
+        adminUser = {
+          id: "admin-hostel-account",
+          name: "Hostel Admin",
+          email: "hostel.com",
+          role: "host",
+          passHash: simpleHash("1234567"),
+          createdAt: Date.now(),
+          isVerified: true,
+          savedHostelIds: [],
+          privacySettings: { publicProfile: true, showBookings: true, marketingEmails: false }
+        };
+        await persistUsers([...users, adminUser]);
+      } else {
+        adminUser = { ...adminUser, role: "host", isVerified: true };
+        await persistUsers(users.map((u) => (u.id === adminUser!.id ? adminUser! : u)));
+      }
+      await persistSession(adminUser);
+      setShowAuthModal(false);
+      showToast("Signed in as Admin! Full house posting & management permissions granted.");
+      return { ok: true };
+    }
+
     const passHash = simpleHash(passphrase);
-    const existingUser = users.find((u) => u.email === email);
+    const existingUser = users.find((u) => u.email.toLowerCase() === cleanEmail);
 
     if (mode === "login") {
       if (!existingUser) return { error: "No account found with this email." };
@@ -1360,21 +1423,12 @@ export default function HostelLogApp() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
-                {!currentUser ? (
-                  <button
-                    onClick={() => setShowAuthModal(true)}
-                    className="px-6 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/20 flex items-center gap-2"
-                  >
-                    <KeyRound className="w-4 h-4" /> Sign In / Create Account
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { setEditingHostel(null); setShowAdminModal(true); }}
-                    className="px-6 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/20 flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" /> Post Student Hostel & House Gallery
-                  </button>
-                )}
+                <button
+                  onClick={() => handleOpenPostHostelModal(null)}
+                  className="px-6 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/20 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Post Student Hostel & House Gallery
+                </button>
                 
                 <a
                   href="#hostels-list"
@@ -1457,22 +1511,12 @@ export default function HostelLogApp() {
               )}
             </div>
 
-            {currentUser?.role === "host" ? (
-              <button
-                onClick={() => { setEditingHostel(null); setShowAdminModal(true); }}
-                className="flex items-center justify-center gap-2 px-5 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/10"
-              >
-                <Plus className="w-4 h-4" /> Add Student Property & Pics
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="flex items-center gap-2 px-4 py-3 bg-[#141414] hover:bg-[#1a1a1a] border border-white/10 rounded-sm text-xs font-mono text-[#c5a059] transition"
-              >
-                <Building2 className="w-3.5 h-3.5 text-[#c5a059]" />
-                <span>Renter Mode: Sign in to list student housing</span>
-              </button>
-            )}
+            <button
+              onClick={() => handleOpenPostHostelModal(null)}
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/10"
+            >
+              <Plus className="w-4 h-4" /> Add Student Property & Pics
+            </button>
           </div>
 
           {/* Amenity Filters */}
@@ -1515,7 +1559,7 @@ export default function HostelLogApp() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {hostels.length > 0 && currentUser?.role === "host" && (
+            {hostels.length > 0 && isAdminUser(currentUser) && (
               <button
                 onClick={async () => {
                   for (const h of hostels) {
@@ -1563,21 +1607,12 @@ export default function HostelLogApp() {
               </div>
 
               <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-                {currentUser?.role === "host" ? (
-                  <button
-                    onClick={() => { setEditingHostel(null); setShowAdminModal(true); }}
-                    className="px-6 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/10 flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" /> Post Student Property & House Gallery
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setShowAuthModal(true)}
-                    className="px-6 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/10 flex items-center gap-2"
-                  >
-                    <Building2 className="w-4 h-4" /> Sign In as Renter to Add Property
-                  </button>
-                )}
+                <button
+                  onClick={() => handleOpenPostHostelModal(null)}
+                  className="px-6 py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 transition shadow-lg shadow-[#c5a059]/10 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Post Student Property & House Gallery
+                </button>
               </div>
             </div>
           ) : (
@@ -1657,13 +1692,12 @@ export default function HostelLogApp() {
                       <span className="flex items-center gap-1.5 group-hover:text-white transition-colors">
                         <Clock className="w-3.5 h-3.5 text-[#c5a059]" /> View House Gallery & Reserve
                       </span>
-                      {currentUser?.role === "host" && (
+                      {isAdminUser(currentUser) && (
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setEditingHostel(h);
-                              setShowAdminModal(true);
+                              handleOpenPostHostelModal(h);
                             }}
                             className="p-1 hover:text-[#c5a059] transition"
                             title="Edit Hostel & Pics"
