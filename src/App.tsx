@@ -183,6 +183,7 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [activeCode, setActiveCode] = useState("");
   const [enteredCode, setEnteredCode] = useState("");
+  const [showDevCode, setShowDevCode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -353,23 +354,36 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
               </div>
             )}
 
-            {/* Simulated Email Notification Card */}
-            <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-2">
+            {/* Realistic Email Sent Card */}
+            <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-3">
               <div className="flex items-center justify-between text-[10px] font-mono uppercase text-[#888888]">
-                <span className="flex items-center gap-1 text-[#c5a059]">
-                  <MailCheck className="w-3.5 h-3.5" /> Verification Email
+                <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <MailCheck className="w-4 h-4 text-emerald-400" /> Verification Email Sent
                 </span>
                 <span>Just Now</span>
               </div>
-              <p className="font-mono text-xs text-[#cccccc]">
-                To: <span className="text-white font-bold">{pendingUser?.email}</span>
+              <p className="font-mono text-xs text-[#cccccc] leading-relaxed">
+                We've dispatched a 6-digit verification code to <span className="text-white font-bold">{pendingUser?.email}</span>. Please check your inbox or spam folder.
               </p>
-              <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                <span className="font-mono text-xs text-[#888888]">Your 6-Digit Verification Code:</span>
-                <span className="font-mono font-bold text-lg text-[#c5a059] bg-[#c5a059]/10 px-3 py-1 rounded border border-[#c5a059]/40 tracking-widest">
-                  {activeCode}
-                </span>
+              
+              <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono">
+                <span className="text-[#888888]">Didn't get an email?</span>
+                <button
+                  type="button"
+                  onClick={() => setShowDevCode(!showDevCode)}
+                  className="text-[#c5a059] hover:underline flex items-center gap-1 text-[11px]"
+                >
+                  {showDevCode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  {showDevCode ? "Hide Dev Code" : "Dev Preview Code"}
+                </button>
               </div>
+
+              {showDevCode && (
+                <div className="p-2.5 bg-[#181818] border border-[#c5a059]/40 rounded-sm flex items-center justify-between">
+                  <span className="font-mono text-[11px] text-[#888888]">Sandbox Code:</span>
+                  <span className="font-mono font-bold text-base text-[#c5a059] tracking-widest">{activeCode}</span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -386,14 +400,16 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
                   className="auth-input font-mono text-center tracking-[0.3em] text-lg font-bold text-white flex-1"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setEnteredCode(activeCode)}
-                  className="px-3 py-2 bg-[#1c1c1c] hover:bg-[#252525] border border-white/10 text-xs font-mono text-[#c5a059] rounded-sm transition"
-                  title="Auto-fill code for quick verification"
-                >
-                  Auto-Fill
-                </button>
+                {showDevCode && (
+                  <button
+                    type="button"
+                    onClick={() => setEnteredCode(activeCode)}
+                    className="px-3 py-2 bg-[#1c1c1c] hover:bg-[#252525] border border-white/10 text-xs font-mono text-[#c5a059] rounded-sm transition"
+                    title="Auto-fill code for quick verification"
+                  >
+                    Auto-Fill
+                  </button>
+                )}
               </div>
             </div>
 
