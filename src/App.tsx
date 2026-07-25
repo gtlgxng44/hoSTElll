@@ -5,7 +5,7 @@ import {
   Luggage, UserCircle, LogOut, KeyRound, Eye, EyeOff, Mail,
   ShieldCheck, User as UserIcon, Stamp, Camera, Edit, Heart, Bookmark,
   GraduationCap, BookOpen, Bus, Building2, Sparkles, MessageSquare,
-  MailCheck, CheckCircle2, AlertTriangle, RefreshCw, Shield
+  MailCheck, CheckCircle2, AlertTriangle, RefreshCw, Shield, Share2, Copy
 } from "lucide-react";
 import { Hostel, User, AmenityInfo, AuthenticateParams, AuthResult, Booking } from "./types";
 import { UserProfileModal } from "./components/UserProfileModal";
@@ -309,26 +309,6 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode, onGoog
               </button>
             </div>
 
-            {/* Admin Credentials Helper */}
-            <div className="mb-4 p-3 bg-[#141414] border border-[#c5a059]/40 rounded-sm font-mono text-xs flex items-center justify-between text-[#c5a059]">
-              <div>
-                <span className="font-bold block text-[10px] uppercase text-[#c5a059]">House Admin Login:</span>
-                <span className="text-white text-[11px]">Email: hostel.com | Pass: 1234567</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail("hostel.com");
-                  setPassphrase("1234567");
-                  setRole("host");
-                  setMode("login");
-                }}
-                className="px-2.5 py-1 bg-[#c5a059] text-black font-bold uppercase text-[10px] rounded-sm hover:brightness-110 transition shrink-0"
-              >
-                Autofill
-              </button>
-            </div>
-
             <div className="mb-5">
               <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-[#888888] mb-2">Account Role</span>
               <div className="grid grid-cols-2 gap-2">
@@ -355,12 +335,16 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode, onGoog
               </div>
             </div>
 
-            <div className="mb-4">
+            {/* Social Login Options */}
+            <div className="mb-5 space-y-2.5">
+              <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-[#888888]">
+                Instant Social Sign In
+              </span>
               <button
                 type="button"
                 onClick={handleGoogleClick}
                 disabled={googleLoading}
-                className="w-full py-2.5 px-4 rounded-sm border border-white/20 bg-[#1a1a1a] hover:bg-[#252525] text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 transition shadow"
+                className="w-full py-3 px-4 rounded-sm border border-[#c5a059]/40 bg-[#161616] hover:bg-[#202020] text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-3 transition shadow-md hover:border-[#c5a059]"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.9 5 12 5z"/>
@@ -368,13 +352,38 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode, onGoog
                   <path fill="#FBBC05" d="M5.3 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.6 7.4C.6 9.4 0 11.6 0 14s.6 4.6 1.6 6.6l3.7-2.9c-.8-.9-1.3-1.8-1.3-2.9z"/>
                   <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.3-6.7-5.3L1.6 15.9C3.5 19.7 7.4 23 12 23z"/>
                 </svg>
-                {googleLoading ? "Connecting Google..." : "Continue with Google"}
+                {googleLoading ? "Authenticating Google Account..." : "Continue with Google"}
               </button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleGoogleClick}
+                  disabled={googleLoading}
+                  className="py-2 px-3 rounded-sm border border-white/10 bg-[#121212] hover:bg-[#1a1a1a] text-white/80 hover:text-white font-mono text-[11px] flex items-center justify-center gap-2 transition"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                  </svg>
+                  <span>GitHub Sign-in</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGoogleClick}
+                  disabled={googleLoading}
+                  className="py-2 px-3 rounded-sm border border-white/10 bg-[#121212] hover:bg-[#1a1a1a] text-white/80 hover:text-white font-mono text-[11px] flex items-center justify-center gap-2 transition"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.27c.61-.75 1.04-1.8 0.92-2.85-.92.04-2.06.62-2.73 1.4-.59.68-1.11 1.76-.97 2.8 1.03.08 2.09-.52 2.78-1.35z"/>
+                  </svg>
+                  <span>Apple Account</span>
+                </button>
+              </div>
             </div>
 
             <div className="relative my-4 flex items-center justify-center">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-              <span className="relative bg-[#0e0e0e] px-2 font-mono text-[10px] text-[#888888] uppercase tracking-widest">or email passphrase</span>
+              <span className="relative bg-[#0e0e0e] px-2 font-mono text-[10px] text-[#888888] uppercase tracking-widest">or email & password</span>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -749,6 +758,33 @@ interface GuestHostelDetailModalProps {
 function GuestHostelDetailModal({ hostel, onClose, onBook, onOpenChat }: GuestHostelDetailModalProps) {
   const photos = hostel.images && hostel.images.length > 0 ? hostel.images : ["https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80"];
   const [activePhoto, setActivePhoto] = useState(photos[0]);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?hostel=${hostel.id}#hostel-${hostel.id}`;
+    const shareData = {
+      title: `${hostel.title} - HostelLog`,
+      text: `Check out ${hostel.title} in ${hostel.location}! Rate: Ksh ${hostel.price?.toLocaleString()}/month`,
+      url: shareUrl,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        // Fallback to clipboard if share was cancelled or unavailable
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (err) {
+      console.error("Could not copy URL to clipboard:", err);
+    }
+  };
 
   // Date range picker setup
   const getTodayStr = () => {
@@ -791,7 +827,17 @@ function GuestHostelDetailModal({ hostel, onClose, onBook, onOpenChat }: GuestHo
               <MapPin className="w-3.5 h-3.5 text-[#c5a059]" /> {hostel.location}
             </p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-sm text-[#888888] hover:text-white hover:bg-white/10 transition"><X className="w-5 h-5" /></button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleShare}
+              className="px-2.5 py-1.5 rounded-sm bg-white/5 hover:bg-white/10 border border-white/10 text-[#c5a059] transition flex items-center gap-1.5 font-mono text-xs"
+              title="Share listing URL"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Share2 className="w-3.5 h-3.5" />}
+              <span>{copied ? "Link Copied!" : "Share"}</span>
+            </button>
+            <button onClick={onClose} className="p-1 rounded-sm text-[#888888] hover:text-white hover:bg-white/10 transition"><X className="w-5 h-5" /></button>
+          </div>
         </div>
 
         {/* Image Gallery */}
@@ -947,6 +993,15 @@ function GuestHostelDetailModal({ hostel, onClose, onBook, onOpenChat }: GuestHo
                 className="w-full py-2.5 rounded-sm bg-[#1e1e1e] hover:bg-[#282828] text-[#c5a059] border border-[#c5a059]/40 font-mono text-xs uppercase tracking-wider font-bold transition flex items-center justify-center gap-2"
               >
                 <MessageSquare className="w-3.5 h-3.5" /> Message Property Owner
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="w-full py-2.5 rounded-sm bg-[#161616] hover:bg-[#202020] text-white/90 border border-white/15 font-mono text-xs uppercase tracking-wider font-bold transition flex items-center justify-center gap-2"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Share2 className="w-3.5 h-3.5 text-[#c5a059]" />}
+                {copied ? "Listing Link Copied!" : "Share Property Listing"}
               </button>
             </div>
           </div>
@@ -1179,7 +1234,7 @@ export default function HostelLogApp() {
       }
       await persistSession(adminUser);
       setShowAuthModal(false);
-      showToast("Signed in as Admin! Full house posting & management permissions granted.");
+      showToast("Welcome back, Hostel Administrator!");
       return { ok: true };
     }
 
