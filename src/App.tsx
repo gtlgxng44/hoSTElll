@@ -184,7 +184,8 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [activeCode, setActiveCode] = useState("");
   const [enteredCode, setEnteredCode] = useState("");
-  const [showCodeHelp, setShowCodeHelp] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "no_key" | "failed">("idle");
+  const [emailErrorDetails, setEmailErrorDetails] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,12 +212,18 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
       setPendingUser(result.user);
       setActiveCode(result.verificationCode);
       setMode("verify");
-      setInfoMessage(`Sending verification code to ${result.user.email}...`);
+      setEmailStatus("sending");
+      setEmailErrorDetails("");
       sendVerificationEmail(result.user.email, result.user.name, result.verificationCode).then((res) => {
         if (res.sent) {
+          setEmailStatus("sent");
           setInfoMessage(`Verification code sent to ${result.user.email}. Please check your inbox or spam folder.`);
+        } else if (res.error === "NO_API_KEY") {
+          setEmailStatus("no_key");
+          setEmailErrorDetails("Server environment variable RESEND_API_KEY is not configured.");
         } else {
-          setInfoMessage(`Could not send email: ${res.error || "Please check email address or API configuration."}`);
+          setEmailStatus("failed");
+          setEmailErrorDetails(res.error || "Email delivery failed.");
         }
       });
     }
@@ -365,14 +372,37 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
 
             {/* Professional Email Delivery Card */}
             <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-mono text-[#888888]">
-                <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                  <MailCheck className="w-4 h-4 text-emerald-400" /> Verification Email Sent
-                </span>
-                <span>Just Now</span>
+              <div className="flex items-center justify-between text-[11px] font-mono">
+                {emailStatus === "sent" ? (
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                    <MailCheck className="w-4 h-4 text-emerald-400" /> Verification Email Dispatched
+                  </span>
+                ) : emailStatus === "sending" ? (
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">
+                    <MailCheck className="w-4 h-4 text-amber-400 animate-pulse" /> Dispatching Email...
+                  </span>
+                ) : emailStatus === "no_key" ? (
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">
+                    <MailCheck className="w-4 h-4 text-amber-400" /> Email Key Not Configured
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-red-400 font-bold">
+                    <MailCheck className="w-4 h-4 text-red-400" /> Delivery Notice
+                  </span>
+                )}
+                <span className="text-[#888888]">Just Now</span>
               </div>
+              
               <p className="font-mono text-xs text-[#cccccc] leading-relaxed">
-                A 6-digit confirmation code was sent to <span className="text-white font-bold">{pendingUser?.email}</span>. Please check your inbox or spam folder.
+                {emailStatus === "sent" ? (
+                  <>A 6-digit confirmation code was sent to <span className="text-white font-bold">{pendingUser?.email}</span>. Please check your inbox or spam folder.</>
+                ) : emailStatus === "no_key" ? (
+                  <>Server missing <code className="text-[#c5a059] bg-[#1a1a1a] px-1 rounded">RESEND_API_KEY</code>. Add this key in platform environment variables to deliver emails to live inbox addresses.</>
+                ) : emailStatus === "failed" ? (
+                  <><span className="text-red-300">{emailErrorDetails || "Could not deliver email."}</span> Check recipient email or API setup.</>
+                ) : (
+                  <>Sending verification message to <span className="text-white font-bold">{pendingUser?.email}</span>...</>
+                )}
               </p>
             </div>
 
