@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Hostel, User, AmenityInfo, AuthenticateParams, AuthResult, Booking } from "./types";
 import { UserProfileModal } from "./components/UserProfileModal";
-import { fetchHostels, saveHostel, removeHostel, fetchUsers, saveUser, fetchBookings, saveBooking } from "./lib/firebase";
+import { fetchHostels, saveHostel, removeHostel, fetchUsers, saveUser, fetchBookings, saveBooking, signInWithGoogle } from "./lib/firebase";
 import { ChatModal } from "./components/ChatModal";
 import { sendVerificationEmail } from "./lib/emailService";
 
@@ -167,9 +167,10 @@ interface AuthModalProps {
   onAuthenticate: (params: AuthenticateParams) => Promise<AuthResult | undefined>;
   onVerifyCode?: (userId: string, code: string) => Promise<AuthResult | undefined>;
   onResendCode?: (userId: string) => Promise<string | undefined>;
+  onGoogleSignIn?: (role: "host" | "guest") => Promise<AuthResult | undefined>;
 }
 
-function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: AuthModalProps) {
+function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode, onGoogleSignIn }: AuthModalProps) {
   const [mode, setMode] = useState<"login" | "register" | "verify">("login");
   const [role, setRole] = useState<"host" | "guest">("host");
   const [name, setName] = useState("");
@@ -179,6 +180,18 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
   const [error, setError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleClick = async () => {
+    if (!onGoogleSignIn) return;
+    setError("");
+    setGoogleLoading(true);
+    const res = await onGoogleSignIn(role);
+    setGoogleLoading(false);
+    if (res?.error) {
+      setError(res.error);
+    }
+  };
 
   // Verification State
   const [pendingUser, setPendingUser] = useState<User | null>(null);
@@ -320,6 +333,28 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
                   <span className="text-[9px] text-[#888888] font-normal">Searches & books student beds</span>
                 </button>
               </div>
+            </div>
+
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={handleGoogleClick}
+                disabled={googleLoading}
+                className="w-full py-2.5 px-4 rounded-sm border border-white/20 bg-[#1a1a1a] hover:bg-[#252525] text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 transition shadow"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.9 5 12 5z"/>
+                  <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                  <path fill="#FBBC05" d="M5.3 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.6 7.4C.6 9.4 0 11.6 0 14s.6 4.6 1.6 6.6l3.7-2.9c-.8-.9-1.3-1.8-1.3-2.9z"/>
+                  <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.3-6.7-5.3L1.6 15.9C3.5 19.7 7.4 23 12 23z"/>
+                </svg>
+                {googleLoading ? "Connecting Google..." : "Continue with Google"}
+              </button>
+            </div>
+
+            <div className="relative my-4 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
+              <span className="relative bg-[#0e0e0e] px-2 font-mono text-[10px] text-[#888888] uppercase tracking-widest">or email passphrase</span>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -1039,6 +1074,51 @@ export default function HostelLogApp() {
     showToast("Hostel deleted.");
   };
 
+  const handleGoogleSignIn = async (selectedRole: "host" | "guest"): Promise<AuthResult | undefined> => {
+    const { user, error } = await signInWithGoogle();
+    if (error || !user) {
+      return { error: error || "Google Sign-In failed or was cancelled." };
+    }
+
+    const googleEmail = user.email || "";
+    if (!googleEmail) {
+      return { error: "Google account does not have a primary email address." };
+    }
+
+    const existingUser = users.find((u) => u.email.toLowerCase() === googleEmail.toLowerCase());
+
+    if (existingUser) {
+      const updatedUser: User = {
+        ...existingUser,
+        isVerified: true,
+        avatarUrl: user.photoURL || existingUser.avatarUrl
+      };
+      const updatedUsers = users.map((u) => (u.id === existingUser.id ? updatedUser : u));
+      await persistUsers(updatedUsers);
+      await persistSession(updatedUser);
+      setShowAuthModal(false);
+      showToast(`Signed in with Google as ${updatedUser.name}`);
+      return { ok: true };
+    } else {
+      const newUser: User = {
+        id: uid(),
+        name: user.displayName || googleEmail.split("@")[0],
+        email: googleEmail.toLowerCase(),
+        role: selectedRole,
+        avatarUrl: user.photoURL || undefined,
+        createdAt: Date.now(),
+        isVerified: true,
+        savedHostelIds: [],
+        privacySettings: { publicProfile: true, showBookings: true, marketingEmails: false }
+      };
+      await persistUsers([...users, newUser]);
+      await persistSession(newUser);
+      setShowAuthModal(false);
+      showToast(`Welcome to HostelLog, ${newUser.name}!`);
+      return { ok: true };
+    }
+  };
+
   const authenticate = async ({ mode, role, name, email, passphrase }: AuthenticateParams): Promise<AuthResult | undefined> => {
     const passHash = simpleHash(passphrase);
     const existingUser = users.find((u) => u.email === email);
@@ -1615,6 +1695,7 @@ export default function HostelLogApp() {
           onAuthenticate={authenticate}
           onVerifyCode={verifyEmailCode}
           onResendCode={resendVerificationCode}
+          onGoogleSignIn={handleGoogleSignIn}
         />
       )}
       

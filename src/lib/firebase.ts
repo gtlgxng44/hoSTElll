@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { initializeFirestore, collection, getDocs, setDoc, deleteDoc, doc, query, where, updateDoc, onSnapshot } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider, signInWithPopup, sendEmailVerification, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { Hostel, User, Booking, Conversation, ChatMessage } from "../types";
 
 const firebaseConfig = {
@@ -12,6 +13,31 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+
+export const sendFirebaseAuthVerification = async (email: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    if (auth.currentUser) {
+      await sendEmailVerification(auth.currentUser);
+      return { success: true, message: `Verification email dispatched via Firebase to ${email}. Please check your inbox and spam folder.` };
+    }
+    return { success: false, message: "No active Firebase session. Sign in with Google or Auth first." };
+  } catch (err: any) {
+    console.warn("Firebase email verification error:", err);
+    return { success: false, message: err?.message || "Failed to send Firebase verification email." };
+  }
+};
+
+export const signInWithGoogle = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return { user: result.user, error: null };
+  } catch (err: any) {
+    return { user: null, error: err?.message || "Google Sign-In failed" };
+  }
+};
+
 export const db = initializeFirestore(
   app,
   {

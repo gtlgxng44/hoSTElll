@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { User, Booking, Hostel, PrivacySettings } from "../types";
 import { sendVerificationEmail } from "../lib/emailService";
+import { signInWithGoogle } from "../lib/firebase";
 
 interface UserProfileModalProps {
   user: User;
@@ -60,6 +61,30 @@ export function UserProfileModal({
   const [verifyError, setVerifyError] = useState("");
   const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "no_key" | "failed">("idle");
   const [emailErrorDetails, setEmailErrorDetails] = useState("");
+
+  const [googleVerifyLoading, setGoogleVerifyLoading] = useState(false);
+
+  const handleVerifyWithGoogle = async () => {
+    setGoogleVerifyLoading(true);
+    setVerifyError("");
+    const { user: gUser, error } = await signInWithGoogle();
+    setGoogleVerifyLoading(false);
+
+    if (error || !gUser) {
+      setVerifyError(error || "Google authentication was cancelled or failed.");
+      return;
+    }
+
+    if (gUser.email) {
+      onSaveProfile({
+        isVerified: true,
+        email: gUser.email.toLowerCase(),
+        name: gUser.displayName || user.name,
+        avatarUrl: gUser.photoURL || avatarUrl,
+      });
+      setShowVerifyBox(false);
+    }
+  };
 
   const handleStartVerify = async () => {
     const code = user.verificationCode || Math.floor(100000 + Math.random() * 900000).toString();
@@ -291,6 +316,27 @@ Thank you for using StudentLog!
 
                 {!user.isVerified && showVerifyBox && (
                   <div className="pt-3 border-t border-white/10 space-y-3 bg-[#101010] p-3 rounded-sm">
+                    {/* Google Instant Verification Button */}
+                    <button
+                      type="button"
+                      onClick={handleVerifyWithGoogle}
+                      disabled={googleVerifyLoading}
+                      className="w-full py-2 px-3 bg-[#1a1a1a] hover:bg-[#252525] border border-white/20 rounded text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition shadow"
+                    >
+                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                        <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.9 5 12 5z"/>
+                        <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                        <path fill="#FBBC05" d="M5.3 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.6 7.4C.6 9.4 0 11.6 0 14s.6 4.6 1.6 6.6l3.7-2.9c-.8-.9-1.3-1.8-1.3-2.9z"/>
+                        <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.3-6.7-5.3L1.6 15.9C3.5 19.7 7.4 23 12 23z"/>
+                      </svg>
+                      {googleVerifyLoading ? "Verifying with Google..." : "Verify instantly with Google"}
+                    </button>
+
+                    <div className="relative my-2 flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
+                      <span className="relative bg-[#101010] px-2 font-mono text-[9px] text-[#888888] uppercase tracking-widest">or email code</span>
+                    </div>
+
                     <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm font-mono text-xs space-y-1.5">
                       <div className="text-[10px] uppercase font-bold flex items-center justify-between">
                         {emailStatus === "sent" ? (
