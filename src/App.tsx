@@ -4,7 +4,8 @@ import {
   Coffee, Lock, WashingMachine, Sofa, UtensilsCrossed, Clock, Trash2,
   Luggage, UserCircle, LogOut, KeyRound, Eye, EyeOff, Mail,
   ShieldCheck, User as UserIcon, Stamp, Camera, Edit, Heart, Bookmark,
-  GraduationCap, BookOpen, Bus, Building2, Sparkles, MessageSquare
+  GraduationCap, BookOpen, Bus, Building2, Sparkles, MessageSquare,
+  MailCheck, CheckCircle2, AlertTriangle, RefreshCw, Shield
 } from "lucide-react";
 import { Hostel, User, AmenityInfo, AuthenticateParams, AuthResult, Booking } from "./types";
 import { UserProfileModal } from "./components/UserProfileModal";
@@ -158,26 +159,35 @@ const INITIAL_HOSTELS: Hostel[] = [
   }
 ];
 
-/* --- AUTH MODAL --- */
+/* --- AUTH MODAL WITH EMAIL VERIFICATION --- */
 
 interface AuthModalProps {
   onClose: () => void;
   onAuthenticate: (params: AuthenticateParams) => Promise<AuthResult | undefined>;
+  onVerifyCode?: (userId: string, code: string) => Promise<AuthResult | undefined>;
+  onResendCode?: (userId: string) => Promise<string | undefined>;
 }
 
-function AuthModal({ onClose, onAuthenticate }: AuthModalProps) {
-  const [mode, setMode] = useState<"login" | "register">("login");
+function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: AuthModalProps) {
+  const [mode, setMode] = useState<"login" | "register" | "verify">("login");
   const [role, setRole] = useState<"host" | "guest">("host");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [passphrase, setPassphrase] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Verification State
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [activeCode, setActiveCode] = useState("");
+  const [enteredCode, setEnteredCode] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setInfoMessage("");
 
     if (!email.includes("@")) return setError("Please enter a valid email address.");
     if (passphrase.length < 6) return setError("Passphrase must be at least 6 characters.");
@@ -185,14 +195,52 @@ function AuthModal({ onClose, onAuthenticate }: AuthModalProps) {
 
     setLoading(true);
     const result = await onAuthenticate({
-      mode,
+      mode: mode === "verify" ? "register" : mode,
       role,
       name: name.trim() || email.split("@")[0],
       email: email.trim().toLowerCase(),
       passphrase,
     });
     setLoading(false);
-    if (result?.error) setError(result.error);
+
+    if (result?.error) {
+      setError(result.error);
+    } else if (result?.requiresVerification && result?.user && result?.verificationCode) {
+      setPendingUser(result.user);
+      setActiveCode(result.verificationCode);
+      setMode("verify");
+      setInfoMessage(`Account created! A 6-digit verification code has been generated for ${result.user.email}.`);
+    }
+  };
+
+  const handleVerifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!enteredCode.trim()) return setError("Please enter the 6-digit code.");
+    if (enteredCode.trim() !== activeCode) return setError("Incorrect verification code. Check below and try again.");
+
+    if (onVerifyCode && pendingUser) {
+      setLoading(true);
+      const res = await onVerifyCode(pendingUser.id, enteredCode.trim());
+      setLoading(false);
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        onClose();
+      }
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (onResendCode && pendingUser) {
+      setLoading(true);
+      const newCode = await onResendCode(pendingUser.id);
+      setLoading(false);
+      if (newCode) {
+        setActiveCode(newCode);
+        setInfoMessage("A fresh verification code has been issued!");
+      }
+    }
   };
 
   return (
@@ -200,95 +248,177 @@ function AuthModal({ onClose, onAuthenticate }: AuthModalProps) {
       <div className="w-full max-w-md rounded-sm p-7 relative shadow-2xl rise-in bg-[#0e0e0e] text-[#f5f5f5] border border-white/10">
         <div className="flex items-center justify-between mb-5 border-b border-white/10 pb-3">
           <div className="flex items-center gap-2.5">
-            <KeyRound className="w-5 h-5 text-[#c5a059]" />
+            {mode === "verify" ? (
+              <MailCheck className="w-5 h-5 text-[#c5a059]" />
+            ) : (
+              <KeyRound className="w-5 h-5 text-[#c5a059]" />
+            )}
             <h2 className="font-serif text-2xl font-bold text-white">
-              {mode === "login" ? "Welcome Back" : "Create Account"}
+              {mode === "login" ? "Welcome Back" : mode === "register" ? "Create Account" : "Verify Email"}
             </h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-sm text-[#888888] hover:text-white hover:bg-white/10 transition"><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="flex rounded-sm p-1 mb-5 bg-[#161616] border border-white/5">
-          <button
-            type="button"
-            onClick={() => { setMode("login"); setError(""); }}
-            className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider rounded-sm font-bold transition ${mode === "login" ? "bg-[#c5a059] text-black shadow" : "text-[#888888] hover:text-white"}`}
-          >
-            Log In
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode("register"); setError(""); }}
-            className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider rounded-sm font-bold transition ${mode === "register" ? "bg-[#c5a059] text-black shadow" : "text-[#888888] hover:text-white"}`}
-          >
-            Register
-          </button>
-        </div>
-
-        <div className="mb-5">
-          <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-[#888888] mb-2">Account Role</span>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setRole("host")}
-              className={`flex flex-col items-center justify-center gap-1 py-2.5 px-3 rounded-sm border text-xs font-mono transition ${role === "host" ? "border-[#c5a059] text-[#c5a059] bg-[#c5a059]/10 font-bold" : "text-[#888888] border-white/10 bg-[#141414] hover:text-white"}`}
-            >
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5" /> Property Owner / Renter
-              </div>
-              <span className="text-[9px] text-[#888888] font-normal">Lists student hostels & house pics</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole("guest")}
-              className={`flex flex-col items-center justify-center gap-1 py-2.5 px-3 rounded-sm border text-xs font-mono transition ${role === "guest" ? "border-[#c5a059] text-[#c5a059] bg-[#c5a059]/10 font-bold" : "text-[#888888] border-white/10 bg-[#141414] hover:text-white"}`}
-            >
-              <div className="flex items-center gap-1.5">
-                <UserIcon className="w-3.5 h-3.5" /> Student Resident
-              </div>
-              <span className="text-[9px] text-[#888888] font-normal">Searches & books student beds</span>
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "register" && (
-            <div>
-              <label className="block font-mono text-[10px] uppercase tracking-[0.15em] text-[#888888] mb-1">
-                {role === "host" ? "Hostel / Business Name" : "Your Name"}
-              </label>
-              <div className="relative">
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="auth-input pl-9" required />
-                <UserIcon className="w-4 h-4 absolute left-3 top-3 text-[#888888]" />
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className="block font-mono text-[10px] uppercase tracking-[0.15em] text-[#888888] mb-1">Email Address</label>
-            <div className="relative">
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" className="auth-input pl-9" required />
-              <Mail className="w-4 h-4 absolute left-3 top-3 text-[#888888]" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-mono text-[10px] uppercase tracking-[0.15em] text-[#888888] mb-1">Passphrase</label>
-            <div className="relative">
-              <input type={showPassword ? "text" : "password"} value={passphrase} onChange={(e) => setPassphrase(e.target.value)} placeholder="••••••••" className="auth-input pl-9 pr-9" required />
-              <Lock className="w-4 h-4 absolute left-3 top-3 text-[#888888]" />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[#888888] hover:text-white">
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        {mode !== "verify" ? (
+          <>
+            <div className="flex rounded-sm p-1 mb-5 bg-[#161616] border border-white/5">
+              <button
+                type="button"
+                onClick={() => { setMode("login"); setError(""); setInfoMessage(""); }}
+                className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider rounded-sm font-bold transition ${mode === "login" ? "bg-[#c5a059] text-black shadow" : "text-[#888888] hover:text-white"}`}
+              >
+                Log In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode("register"); setError(""); setInfoMessage(""); }}
+                className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider rounded-sm font-bold transition ${mode === "register" ? "bg-[#c5a059] text-black shadow" : "text-[#888888] hover:text-white"}`}
+              >
+                Register
               </button>
             </div>
-          </div>
 
-          {error && <p className="font-mono text-xs text-red-300 bg-red-950/80 p-3 rounded-sm border border-red-800/50">{error}</p>}
+            <div className="mb-5">
+              <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-[#888888] mb-2">Account Role</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRole("host")}
+                  className={`flex flex-col items-center justify-center gap-1 py-2.5 px-3 rounded-sm border text-xs font-mono transition ${role === "host" ? "border-[#c5a059] text-[#c5a059] bg-[#c5a059]/10 font-bold" : "text-[#888888] border-white/10 bg-[#141414] hover:text-white"}`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Property Owner / Renter
+                  </div>
+                  <span className="text-[9px] text-[#888888] font-normal">Lists student hostels & house pics</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole("guest")}
+                  className={`flex flex-col items-center justify-center gap-1 py-2.5 px-3 rounded-sm border text-xs font-mono transition ${role === "guest" ? "border-[#c5a059] text-[#c5a059] bg-[#c5a059]/10 font-bold" : "text-[#888888] border-white/10 bg-[#141414] hover:text-white"}`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <UserIcon className="w-3.5 h-3.5" /> Student Resident
+                  </div>
+                  <span className="text-[9px] text-[#888888] font-normal">Searches & books student beds</span>
+                </button>
+              </div>
+            </div>
 
-          <button type="submit" disabled={loading} className="mt-2 w-full py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 disabled:opacity-50 transition shadow-lg shadow-[#c5a059]/10">
-            {loading ? "Processing..." : mode === "login" ? "Sign In" : "Create Account"}
-          </button>
-        </form>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === "register" && (
+                <div>
+                  <label className="block font-mono text-[10px] uppercase tracking-[0.15em] text-[#888888] mb-1">
+                    {role === "host" ? "Hostel / Business Name" : "Your Name"}
+                  </label>
+                  <div className="relative">
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="auth-input pl-9" required />
+                    <UserIcon className="w-4 h-4 absolute left-3 top-3 text-[#888888]" />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-mono text-[10px] uppercase tracking-[0.15em] text-[#888888] mb-1">Email Address</label>
+                <div className="relative">
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" className="auth-input pl-9" required />
+                  <Mail className="w-4 h-4 absolute left-3 top-3 text-[#888888]" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-mono text-[10px] uppercase tracking-[0.15em] text-[#888888] mb-1">Passphrase</label>
+                <div className="relative">
+                  <input type={showPassword ? "text" : "password"} value={passphrase} onChange={(e) => setPassphrase(e.target.value)} placeholder="••••••••" className="auth-input pl-9 pr-9" required />
+                  <Lock className="w-4 h-4 absolute left-3 top-3 text-[#888888]" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-[#888888] hover:text-white">
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && <p className="font-mono text-xs text-red-300 bg-red-950/80 p-3 rounded-sm border border-red-800/50">{error}</p>}
+
+              <button type="submit" disabled={loading} className="mt-2 w-full py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 disabled:opacity-50 transition shadow-lg shadow-[#c5a059]/10">
+                {loading ? "Processing..." : mode === "login" ? "Sign In" : "Register & Get Code"}
+              </button>
+            </form>
+          </>
+        ) : (
+          /* EMAIL VERIFICATION SCREEN */
+          <form onSubmit={handleVerifySubmit} className="space-y-5">
+            {infoMessage && (
+              <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm text-xs font-mono text-[#c5a059]">
+                {infoMessage}
+              </div>
+            )}
+
+            {/* Simulated Email Notification Card */}
+            <div className="p-4 rounded-sm bg-[#121212] border border-white/10 space-y-2">
+              <div className="flex items-center justify-between text-[10px] font-mono uppercase text-[#888888]">
+                <span className="flex items-center gap-1 text-[#c5a059]">
+                  <MailCheck className="w-3.5 h-3.5" /> Verification Email
+                </span>
+                <span>Just Now</span>
+              </div>
+              <p className="font-mono text-xs text-[#cccccc]">
+                To: <span className="text-white font-bold">{pendingUser?.email}</span>
+              </p>
+              <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                <span className="font-mono text-xs text-[#888888]">Your 6-Digit Verification Code:</span>
+                <span className="font-mono font-bold text-lg text-[#c5a059] bg-[#c5a059]/10 px-3 py-1 rounded border border-[#c5a059]/40 tracking-widest">
+                  {activeCode}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-mono text-[10px] uppercase tracking-[0.15em] text-[#888888] mb-1">
+                Enter 6-Digit Code
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={enteredCode}
+                  onChange={(e) => setEnteredCode(e.target.value)}
+                  placeholder="123456"
+                  className="auth-input font-mono text-center tracking-[0.3em] text-lg font-bold text-white flex-1"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setEnteredCode(activeCode)}
+                  className="px-3 py-2 bg-[#1c1c1c] hover:bg-[#252525] border border-white/10 text-xs font-mono text-[#c5a059] rounded-sm transition"
+                  title="Auto-fill code for quick verification"
+                >
+                  Auto-Fill
+                </button>
+              </div>
+            </div>
+
+            {error && <p className="font-mono text-xs text-red-300 bg-red-950/80 p-3 rounded-sm border border-red-800/50">{error}</p>}
+
+            <div className="space-y-2 pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 rounded-sm font-mono text-xs uppercase tracking-widest font-bold text-black bg-[#c5a059] hover:brightness-110 disabled:opacity-50 transition shadow-lg shadow-[#c5a059]/10 flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" /> Verify Email & Complete Sign-Up
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={loading}
+                className="w-full py-2 rounded-sm font-mono text-xs uppercase tracking-wider text-[#888888] hover:text-white transition flex items-center justify-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Resend Verification Code
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -889,7 +1019,19 @@ export default function HostelLogApp() {
       if (!existingUser) return { error: "No account found with this email." };
       if (existingUser.passHash !== passHash) return { error: "Incorrect passphrase." };
 
-      await persistSession({ id: existingUser.id, name: existingUser.name, email: existingUser.email, role: existingUser.role, avatarUrl: existingUser.avatarUrl, bio: existingUser.bio, phone: existingUser.phone, location: existingUser.location, savedHostelIds: existingUser.savedHostelIds, privacySettings: existingUser.privacySettings });
+      await persistSession({
+        id: existingUser.id,
+        name: existingUser.name,
+        email: existingUser.email,
+        role: existingUser.role,
+        avatarUrl: existingUser.avatarUrl,
+        bio: existingUser.bio,
+        phone: existingUser.phone,
+        location: existingUser.location,
+        savedHostelIds: existingUser.savedHostelIds,
+        privacySettings: existingUser.privacySettings,
+        isVerified: existingUser.isVerified ?? true
+      });
       setShowAuthModal(false);
       showToast(`Welcome back, ${existingUser.name}!`);
       return { ok: true };
@@ -898,14 +1040,51 @@ export default function HostelLogApp() {
     if (mode === "register") {
       if (existingUser) return { error: "An account with this email already exists." };
 
-      const newUser: User = { id: uid(), name, email, role, passHash, createdAt: Date.now(), savedHostelIds: [], privacySettings: { publicProfile: true, showBookings: true, marketingEmails: false } };
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const newUser: User = {
+        id: uid(),
+        name,
+        email,
+        role,
+        passHash,
+        createdAt: Date.now(),
+        isVerified: false,
+        verificationCode: code,
+        savedHostelIds: [],
+        privacySettings: { publicProfile: true, showBookings: true, marketingEmails: false }
+      };
       await persistUsers([...users, newUser]);
-      await persistSession(newUser);
 
-      setShowAuthModal(false);
-      showToast(`Logged in as ${newUser.name}.`);
-      return { ok: true };
+      return { requiresVerification: true, verificationCode: code, user: newUser };
     }
+  };
+
+  const verifyEmailCode = async (userId: string, code: string): Promise<AuthResult | undefined> => {
+    const targetUser = users.find((u) => u.id === userId);
+    if (!targetUser) return { error: "User account not found." };
+    if (targetUser.verificationCode !== code.trim()) return { error: "Incorrect verification code. Please check and try again." };
+
+    const verifiedUser: User = { ...targetUser, isVerified: true, verificationCode: undefined };
+    const updatedUsers = users.map((u) => (u.id === userId ? verifiedUser : u));
+    await persistUsers(updatedUsers);
+    await persistSession(verifiedUser);
+
+    setShowAuthModal(false);
+    showToast(`Email verified! Welcome to HostelLog, ${verifiedUser.name}.`);
+    return { ok: true };
+  };
+
+  const resendVerificationCode = async (userId: string): Promise<string | undefined> => {
+    const targetUser = users.find((u) => u.id === userId);
+    if (!targetUser) return undefined;
+
+    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const updatedUser: User = { ...targetUser, verificationCode: newCode };
+    const updatedUsers = users.map((u) => (u.id === userId ? updatedUser : u));
+    await persistUsers(updatedUsers);
+
+    showToast(`New verification code issued for ${targetUser.email}`);
+    return newCode;
   };
 
   const logout = async () => {
@@ -1014,8 +1193,11 @@ export default function HostelLogApp() {
                   )}
                 </div>
                 <div className="hidden sm:block">
-                  <div className="font-medium text-[#f5f5f5] text-xs leading-none group-hover:text-[#c5a059] transition">
+                  <div className="font-medium text-[#f5f5f5] text-xs leading-none group-hover:text-[#c5a059] transition flex items-center gap-1">
                     {currentUser.name}
+                    {currentUser.isVerified && (
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" title="Verified Email" />
+                    )}
                   </div>
                   <span className="text-[9px] font-mono uppercase text-[#c5a059]">
                     {currentUser.role === 'host' ? 'Admin / Host' : 'Student'}
@@ -1390,7 +1572,14 @@ export default function HostelLogApp() {
       </main>
 
       {/* Render Modals */}
-      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuthenticate={authenticate} />}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onAuthenticate={authenticate}
+          onVerifyCode={verifyEmailCode}
+          onResendCode={resendVerificationCode}
+        />
+      )}
       
       {showAdminModal && (
         <AdminHostelModal

@@ -2,7 +2,8 @@ import React, { useState, useRef } from "react";
 import {
   X, User as UserIcon, Mail, Phone, MapPin, Camera,
   Bookmark, Calendar, Shield, Eye, EyeOff, Check,
-  Trash2, ExternalLink, Lock, Luggage, Clock, Heart, Award, Download
+  Trash2, ExternalLink, Lock, Luggage, Clock, Heart, Award, Download,
+  CheckCircle2, AlertTriangle, MailCheck
 } from "lucide-react";
 import { User, Booking, Hostel, PrivacySettings } from "../types";
 
@@ -50,6 +51,31 @@ export function UserProfileModal({
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Email Verification State inside Profile
+  const [showVerifyBox, setShowVerifyBox] = useState(false);
+  const [verifyInput, setVerifyInput] = useState("");
+  const [activeCode, setActiveCode] = useState(user.verificationCode || "682049");
+  const [verifyError, setVerifyError] = useState("");
+
+  const handleStartVerify = () => {
+    const code = user.verificationCode || Math.floor(100000 + Math.random() * 900000).toString();
+    setActiveCode(code);
+    onSaveProfile({ verificationCode: code });
+    setShowVerifyBox(true);
+    setVerifyError("");
+  };
+
+  const handleConfirmVerify = () => {
+    if (verifyInput.trim() === activeCode) {
+      onSaveProfile({ isVerified: true, verificationCode: undefined });
+      setShowVerifyBox(false);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    } else {
+      setVerifyError("Incorrect verification code. Try again.");
+    }
+  };
 
   // Handle avatar file upload preview
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,12 +164,17 @@ Thank you for using StudentLog!
               <img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-serif text-2xl font-bold text-white">{user.name}</h2>
+                {user.isVerified && (
+                  <span className="px-2 py-0.5 text-[10px] font-mono uppercase bg-emerald-500/20 text-emerald-300 rounded-sm font-bold border border-emerald-500/30 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Verified Email
+                  </span>
+                )}
                 <span className={`px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest rounded-sm font-bold ${
                   user.role === 'host' ? 'bg-[#c5a059] text-black' : 'bg-white/10 text-[#c5a059]'
                 }`}>
-                  {user.role === 'host' ? 'Admin / Host' : 'Traveler'}
+                  {user.role === 'host' ? 'Admin / Host' : 'Student Resident'}
                 </span>
               </div>
               <p className="font-mono text-xs text-[#888888]">{user.email}</p>
@@ -207,6 +238,81 @@ Thank you for using StudentLog!
           {/* TAB 1: PERSONAL INFO */}
           {activeTab === "profile" && (
             <form onSubmit={handleSubmitProfile} className="space-y-5 py-2">
+              
+              {/* Email Verification Status Card */}
+              <div className={`p-4 rounded-sm border ${
+                user.isVerified ? "bg-emerald-950/20 border-emerald-500/30" : "bg-amber-950/20 border-amber-500/30"
+              } space-y-3`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start sm:items-center gap-2.5">
+                    {user.isVerified ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
+                    ) : (
+                      <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 sm:mt-0" />
+                    )}
+                    <div>
+                      <h4 className="font-serif font-bold text-sm text-white flex items-center gap-2">
+                        {user.isVerified ? "Email Address Verified" : "Unverified Email Address"}
+                      </h4>
+                      <p className="font-mono text-xs text-[#a0a0a0]">
+                        {user.isVerified 
+                          ? "Your account email is verified. You have full access to book hostels and publish property listings."
+                          : `Email verification pending for ${user.email}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!user.isVerified && (
+                    <button
+                      type="button"
+                      onClick={handleStartVerify}
+                      className="px-3.5 py-1.5 bg-[#c5a059] text-black font-mono text-xs font-bold uppercase rounded-sm hover:brightness-110 transition shrink-0"
+                    >
+                      Verify Email
+                    </button>
+                  )}
+                </div>
+
+                {!user.isVerified && showVerifyBox && (
+                  <div className="pt-3 border-t border-white/10 space-y-3 bg-[#101010] p-3 rounded-sm">
+                    <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm font-mono text-xs space-y-1">
+                      <div className="text-[10px] uppercase text-[#c5a059] font-bold flex items-center gap-1">
+                        <MailCheck className="w-3.5 h-3.5" /> Verification Email Sent
+                      </div>
+                      <div className="text-white flex items-center justify-between pt-1">
+                        <span>Your 6-Digit Code:</span>
+                        <span className="bg-[#c5a059] text-black px-2.5 py-0.5 rounded font-bold tracking-widest text-sm">{activeCode}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={verifyInput}
+                        onChange={(e) => setVerifyInput(e.target.value)}
+                        placeholder="Enter 6-digit code"
+                        className="auth-input font-mono tracking-widest text-center flex-1 text-sm font-bold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setVerifyInput(activeCode)}
+                        className="px-3 py-1.5 bg-[#1e1e1e] border border-white/10 text-xs font-mono text-[#c5a059] rounded-sm"
+                      >
+                        Auto-Fill
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmVerify}
+                        className="px-4 py-1.5 bg-[#c5a059] text-black font-bold font-mono text-xs uppercase rounded-sm hover:brightness-110"
+                      >
+                        Confirm Code
+                      </button>
+                    </div>
+                    {verifyError && <p className="font-mono text-xs text-red-300">{verifyError}</p>}
+                  </div>
+                )}
+              </div>
               
               {/* Profile Avatar Upload Section */}
               <div className="p-4 rounded-sm border border-white/10 bg-[#141414] flex flex-col sm:flex-row items-center gap-4">

@@ -34,6 +34,8 @@ export interface User {
   savedHostelIds?: string[];
   privacySettings?: PrivacySettings;
   createdAt?: number;
+  isVerified?: boolean;
+  verificationCode?: string;
 }
 
 export interface ChatMessage {
@@ -95,4 +97,7 @@ export interface AuthenticateParams {
 export interface AuthResult {
   ok?: boolean;
   error?: string;
+  requiresVerification?: boolean;
+  verificationCode?: string;
+  user?: User;
 }
