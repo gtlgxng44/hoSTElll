@@ -71,9 +71,13 @@ async function startServer() {
 
         if (!resendResponse.ok) {
           console.error("Resend API Error:", data);
+          let rawError = data.message || "Failed to deliver email through Resend API";
+          if (rawError.toLowerCase().includes("testing emails") || rawError.toLowerCase().includes("can only send to")) {
+            rawError = `Resend Free Tier Restriction: ${rawError}. (Note: On Resend free tier without a custom domain, emails can only be sent to the email address used to create the Resend account).`;
+          }
           return res.status(400).json({
             sent: false,
-            error: data.message || "Failed to deliver email through Resend API"
+            error: rawError
           });
         }
 
