@@ -303,44 +303,27 @@ Thank you for using StudentLog!
                           </span>
                         ) : emailStatus === "no_key" ? (
                           <span className="text-amber-400 flex items-center gap-1">
-                            <AlertTriangle className="w-3.5 h-3.5" /> Email Key Not Configured
+                            <AlertTriangle className="w-3.5 h-3.5" /> Email Service Not Configured
                           </span>
                         ) : (
                           <span className="text-red-400 flex items-center gap-1">
-                            <AlertTriangle className="w-3.5 h-3.5" /> Delivery Restricted
+                            <AlertTriangle className="w-3.5 h-3.5" /> Delivery Notice
                           </span>
                         )}
-                        <span className="text-[#666666]">Instant Verification Ready</span>
+                        <span className="text-[#666666]">HostelLog Security</span>
                       </div>
 
                       <p className="text-[#a0a0a0] text-[11px] leading-relaxed">
                         {emailStatus === "sent" ? (
                           <>Dispatched confirmation email to <span className="text-white font-bold">{user.email}</span>. Check inbox or spam folder.</>
                         ) : emailStatus === "no_key" ? (
-                          <>Server <code className="text-[#c5a059] bg-[#222222] px-1">RESEND_API_KEY</code> is not configured. Use the instant verification code below.</>
+                          <>Email service API key is not configured in server environment variables.</>
                         ) : emailStatus === "failed" ? (
-                          <><span className="text-red-300">{emailErrorDetails || "Resend free tier limits sending."}</span> You can verify instantly with your code below.</>
+                          <><span className="text-red-300">{emailErrorDetails || "Could not deliver email."}</span> Please verify recipient address or try again.</>
                         ) : (
                           <>Sending code to <span className="text-white font-bold">{user.email}</span>...</>
                         )}
                       </p>
-
-                      {/* Instant Code Banner & Quick Fill */}
-                      <div className="pt-2 flex items-center justify-between bg-[#111111] p-2 rounded border border-white/5 mt-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#888888] text-[10px] uppercase tracking-wider">Your Code:</span>
-                          <span className="font-mono text-sm font-bold text-[#c5a059] tracking-widest bg-[#1f1f1f] px-2 py-0.5 rounded border border-[#c5a059]/30">
-                            {activeCode}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setVerifyInput(activeCode)}
-                          className="px-2.5 py-1 bg-[#c5a059]/20 hover:bg-[#c5a059]/30 border border-[#c5a059]/40 text-[#c5a059] font-mono text-[10px] font-bold uppercase rounded transition"
-                        >
-                          Auto-fill Code
-                        </button>
-                      </div>
                     </div>
 
                     <div className="flex gap-2">

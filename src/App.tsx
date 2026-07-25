@@ -383,7 +383,7 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
                   </span>
                 ) : emailStatus === "no_key" ? (
                   <span className="flex items-center gap-1.5 text-amber-400 font-bold">
-                    <MailCheck className="w-4 h-4 text-amber-400" /> Email Key Not Configured
+                    <MailCheck className="w-4 h-4 text-amber-400" /> Email Service Not Configured
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5 text-red-400 font-bold">
@@ -397,32 +397,13 @@ function AuthModal({ onClose, onAuthenticate, onVerifyCode, onResendCode }: Auth
                 {emailStatus === "sent" ? (
                   <>A 6-digit confirmation code was sent to <span className="text-white font-bold">{pendingUser?.email}</span>. Please check your inbox or spam folder.</>
                 ) : emailStatus === "no_key" ? (
-                  <>Server missing <code className="text-[#c5a059] bg-[#1a1a1a] px-1 rounded">RESEND_API_KEY</code>. Use instant verification below to complete sign up.</>
+                  <>Email dispatch service key is not configured. Please add an API key in environment variables.</>
                 ) : emailStatus === "failed" ? (
-                  <><span className="text-red-300">{emailErrorDetails || "Could not deliver email."}</span> Verify instantly using the generated code below.</>
+                  <><span className="text-red-300">{emailErrorDetails || "Could not deliver email."}</span> Please check recipient address or try again.</>
                 ) : (
                   <>Sending verification message to <span className="text-white font-bold">{pendingUser?.email}</span>...</>
                 )}
               </p>
-
-              {/* Instant Verification Code display & Auto-fill button */}
-              {activeCode && (
-                <div className="pt-2 flex items-center justify-between bg-[#181818] p-2.5 rounded border border-[#c5a059]/30">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#888888] text-[10px] uppercase tracking-wider font-mono">Verification Code:</span>
-                    <span className="font-mono text-base font-bold text-[#c5a059] tracking-widest bg-[#0a0a0a] px-2 py-0.5 rounded border border-[#c5a059]/40">
-                      {activeCode}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEnteredCode(activeCode)}
-                    className="px-3 py-1 bg-[#c5a059] hover:brightness-110 text-black font-mono text-[10px] font-bold uppercase rounded transition shadow"
-                  >
-                    Auto-fill Code
-                  </button>
-                </div>
-              )}
             </div>
 
             <div>
