@@ -58,7 +58,6 @@ export function UserProfileModal({
   const [verifyInput, setVerifyInput] = useState("");
   const [activeCode, setActiveCode] = useState(user.verificationCode || "682049");
   const [verifyError, setVerifyError] = useState("");
-  const [showDevCode, setShowDevCode] = useState(false);
 
   const handleStartVerify = () => {
     const code = user.verificationCode || Math.floor(100000 + Math.random() * 900000).toString();
@@ -278,29 +277,13 @@ Thank you for using StudentLog!
 
                 {!user.isVerified && showVerifyBox && (
                   <div className="pt-3 border-t border-white/10 space-y-3 bg-[#101010] p-3 rounded-sm">
-                    <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm font-mono text-xs space-y-2">
-                      <div className="text-[10px] uppercase text-emerald-400 font-bold flex items-center justify-between">
-                        <span className="flex items-center gap-1">
-                          <MailCheck className="w-3.5 h-3.5" /> Verification Email Dispatched
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setShowDevCode(!showDevCode)}
-                          className="text-[#c5a059] hover:underline flex items-center gap-1 text-[10px] lowercase"
-                        >
-                          {showDevCode ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                          {showDevCode ? "hide dev code" : "dev preview code"}
-                        </button>
+                    <div className="p-3 bg-[#181818] border border-[#c5a059]/30 rounded-sm font-mono text-xs space-y-1.5">
+                      <div className="text-[10px] uppercase text-emerald-400 font-bold flex items-center gap-1">
+                        <MailCheck className="w-3.5 h-3.5" /> Verification Email Dispatched
                       </div>
                       <p className="text-[#a0a0a0] text-[11px] leading-relaxed">
-                        A 6-digit confirmation code was sent to <span className="text-white font-bold">{user.email}</span>.
+                        A 6-digit confirmation code was sent to <span className="text-white font-bold">{user.email}</span>. Please check your inbox or spam folder.
                       </p>
-                      {showDevCode && (
-                        <div className="pt-1.5 border-t border-white/5 flex items-center justify-between">
-                          <span className="text-[#888888]">Sandbox Code:</span>
-                          <span className="bg-[#c5a059] text-black px-2.5 py-0.5 rounded font-bold tracking-widest text-xs">{activeCode}</span>
-                        </div>
-                      )}
                     </div>
 
                     <div className="flex gap-2">
@@ -312,15 +295,6 @@ Thank you for using StudentLog!
                         placeholder="Enter 6-digit code"
                         className="auth-input font-mono tracking-widest text-center flex-1 text-sm font-bold"
                       />
-                      {showDevCode && (
-                        <button
-                          type="button"
-                          onClick={() => setVerifyInput(activeCode)}
-                          className="px-3 py-1.5 bg-[#1e1e1e] border border-white/10 text-xs font-mono text-[#c5a059] rounded-sm"
-                        >
-                          Auto-Fill
-                        </button>
-                      )}
                       <button
                         type="button"
                         onClick={handleConfirmVerify}

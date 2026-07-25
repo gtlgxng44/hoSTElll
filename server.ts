@@ -17,65 +17,99 @@ async function startServer() {
         return res.status(400).json({ error: "Email and verification code are required" });
       }
 
-      const apiKey = process.env.RESEND_API_KEY;
+      const resendApiKey = process.env.RESEND_API_KEY;
+      const sendgridApiKey = process.env.SENDGRID_API_KEY;
 
-      if (!apiKey) {
-        console.log(`[Email Dispatch Simulation] Code ${code} for ${email}`);
+      if (!resendApiKey && !sendgridApiKey) {
+        console.log(`[Email Dispatch] Code ${code} generated for ${email}. (Missing RESEND_API_KEY/SENDGRID_API_KEY environment variable)`);
         return res.json({
           sent: false,
-          simulated: true,
-          message: "RESEND_API_KEY is not configured in Environment Variables. Operating in simulation mode."
+          error: "NO_API_KEY",
+          message: "Email key not configured. Please add RESEND_API_KEY to AI Studio Environment Variables to enable live inbox delivery."
         });
       }
 
-      const resendResponse = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          from: "HostelLog Verification <onboarding@resend.dev>",
-          to: [email],
-          subject: `${code} is your HostelLog verification code`,
-          html: `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 28px; background-color: #0f0f0f; color: #f5f5f5; border-radius: 12px; border: 1px solid #262626;">
-              <div style="margin-bottom: 24px;">
-                <h1 style="color: #c5a059; font-size: 20px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 6px 0;">HostelLog</h1>
-                <p style="color: #888888; font-size: 13px; margin: 0;">Student Hostel & Boarding Verification</p>
+      // 1. Dispatch via Resend API if configured
+      if (resendApiKey) {
+        const resendResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: "HostelLog Verification <onboarding@resend.dev>",
+            to: [email],
+            subject: `${code} is your HostelLog verification code`,
+            html: `
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 28px; background-color: #0f0f0f; color: #f5f5f5; border-radius: 12px; border: 1px solid #262626;">
+                <div style="margin-bottom: 24px;">
+                  <h1 style="color: #c5a059; font-size: 20px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 6px 0;">HostelLog</h1>
+                  <p style="color: #888888; font-size: 13px; margin: 0;">Student Hostel & Boarding Verification</p>
+                </div>
+                <p style="color: #d4d4d4; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+                  Hello <strong>${name || "User"}</strong>,
+                </p>
+                <p style="color: #a3a3a3; font-size: 14px; margin-bottom: 20px;">
+                  Please enter the following 6-digit confirmation code in your HostelLog application to verify your email address:
+                </p>
+                <div style="background-color: #171717; border: 1px solid #333333; border-radius: 8px; padding: 18px; text-align: center; margin-bottom: 24px;">
+                  <span style="font-family: monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #c5a059;">${code}</span>
+                </div>
+                <p style="color: #737373; font-size: 12px; line-height: 1.5; margin: 0;">
+                  If you did not initiate this request, you can safely ignore this message.
+                </p>
               </div>
-              <p style="color: #d4d4d4; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-                Hello <strong>${name || "User"}</strong>,
-              </p>
-              <p style="color: #a3a3a3; font-size: 14px; margin-bottom: 20px;">
-                Please enter the following 6-digit confirmation code in your HostelLog application to verify your email address:
-              </p>
-              <div style="background-color: #171717; border: 1px solid #333333; border-radius: 8px; padding: 18px; text-align: center; margin-bottom: 24px;">
-                <span style="font-family: monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #c5a059;">${code}</span>
-              </div>
-              <p style="color: #737373; font-size: 12px; line-height: 1.5; margin: 0;">
-                If you did not initiate this request, you can safely ignore this message.
-              </p>
-            </div>
-          `
-        })
-      });
+            `
+          })
+        });
 
-      const data = await resendResponse.json();
+        const data = await resendResponse.json();
 
-      if (!resendResponse.ok) {
-        console.error("Resend API Error:", data);
-        return res.status(500).json({
-          sent: false,
-          error: data.message || "Failed to deliver email through Resend API"
+        if (!resendResponse.ok) {
+          console.error("Resend API Error:", data);
+          return res.status(400).json({
+            sent: false,
+            error: data.message || "Failed to deliver email through Resend API"
+          });
+        }
+
+        return res.json({
+          sent: true,
+          id: data.id,
+          message: `Verification code successfully emailed to ${email}`
         });
       }
 
-      return res.json({
-        sent: true,
-        id: data.id,
-        message: `Verification code successfully emailed to ${email}`
-      });
+      // 2. Dispatch via SendGrid API if configured
+      if (sendgridApiKey) {
+        const sgResponse = await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${sendgridApiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email }] }],
+            from: { email: "no-reply@hostellog.com", name: "HostelLog Verification" },
+            subject: `${code} is your HostelLog verification code`,
+            content: [
+              {
+                type: "text/html",
+                value: `<p>Your HostelLog verification code is: <strong>${code}</strong></p>`
+              }
+            ]
+          })
+        });
+
+        if (!sgResponse.ok) {
+          const errText = await sgResponse.text();
+          console.error("SendGrid Error:", errText);
+          return res.status(400).json({ sent: false, error: "SendGrid delivery failed" });
+        }
+
+        return res.json({ sent: true, message: `Email delivered to ${email}` });
+      }
     } catch (err: any) {
       console.error("Failed to send verification email:", err);
       return res.status(500).json({ error: err.message || "Internal server error" });
